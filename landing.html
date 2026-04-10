@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chatbook — A coffee table book for your group chat</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --ink: #1a1a1a;
+      --cream: #f7f4ef;
+      --warm-gray: #9a9488;
+      --crimson: #8B0000;
+      --gold: #C9A84C;
+    }
+
+    html {
+      font-size: 16px;
+    }
+
+    body {
+      background-color: var(--cream);
+      color: var(--ink);
+      font-family: Georgia, 'Times New Roman', serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* LAYOUT */
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    /* HERO */
+    .hero {
+      background-color: var(--crimson);
+      padding: 6rem 0 4rem;
+      text-align: center;
+    }
+
+    .wordmark {
+      font-family: Georgia, serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 3.5rem;
+    }
+
+    .headline {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: normal;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      margin-bottom: 1.5rem;
+      color: var(--cream);
+    }
+
+    .subhead {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      color: var(--cream);
+      font-style: italic;
+      max-width: 520px;
+      margin: 0 auto 3rem;
+      line-height: 1.7;
+      opacity: 0.85;
+    }
+
+    /* RULE */
+    .rule {
+      border: none;
+      border-top: 1px solid #d4cfc7;
+      margin: 3rem 0;
+    }
+
+    /* BODY COPY */
+    .body-copy {
+      font-size: 1.05rem;
+      line-height: 1.8;
+      margin-bottom: 2.5rem;
+      color: #2e2e2e;
+    }
+
+    /* FOR THE GROUP LINES */
+    .for-lines {
+      list-style: none;
+      margin: 2rem 0;
+    }
+
+    .for-lines li {
+      font-size: 1rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #e0dbd3;
+      color: #3d3d3d;
+    }
+
+    .for-lines li::before {
+      content: "— ";
+      color: var(--warm-gray);
+    }
+
+    /* HOW IT WORKS */
+    .how-it-works {
+      padding: 3rem 0;
+    }
+
+    .section-label {
+      font-family: Georgia, serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--warm-gray);
+      margin-bottom: 2rem;
+    }
+
+    .steps {
+      counter-reset: steps;
+      list-style: none;
+    }
+
+    .steps li {
+      counter-increment: steps;
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+      margin-bottom: 1.75rem;
+    }
+
+    .steps li::before {
+      content: counter(steps);
+      font-size: 0.8rem;
+      color: var(--warm-gray);
+      min-width: 1.5rem;
+      padding-top: 0.15rem;
+    }
+
+    .steps li span {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #2e2e2e;
+    }
+
+    /* CTA */
+    .cta-section {
+      padding: 3rem 0 2rem;
+      text-align: center;
+    }
+
+    .email-form {
+      display: flex;
+      gap: 0;
+      max-width: 440px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .email-input {
+      flex: 1;
+      font-family: Georgia, serif;
+      font-size: 0.95rem;
+      padding: 0.85rem 1rem;
+      border: 1px solid #d4cfc7;
+      border-right: none;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+    }
+
+    .email-input::placeholder {
+      color: var(--warm-gray);
+    }
+
+    .email-input:focus {
+      border-color: var(--crimson);
+    }
+
+    .email-submit {
+      font-family: Georgia, serif;
+      font-size: 0.9rem;
+      letter-spacing: 0.03em;
+      padding: 0.85rem 1.25rem;
+      background-color: var(--crimson);
+      color: var(--cream);
+      border: 1px solid var(--gold);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 0.15s ease;
+    }
+
+    .email-submit:hover {
+      background-color: #6e0000;
+    }
+
+    .cta-btn {
+      display: inline-block;
+      background-color: var(--crimson);
+      color: var(--cream);
+      font-family: Georgia, serif;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+      padding: 1rem 2.5rem;
+      text-decoration: none;
+      cursor: pointer;
+      border: 2px solid var(--gold);
+      transition: background-color 0.15s ease;
+    }
+
+    .cta-btn:hover {
+      background-color: #6e0000;
+    }
+
+    .consent {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--warm-gray);
+      margin-top: 2rem;
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 3rem 0;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--warm-gray);
+      border-top: 1px solid #d4cfc7;
+      margin-top: 2rem;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 480px) {
+      .hero {
+        padding: 4rem 0 2.5rem;
+      }
+
+      .email-form {
+        flex-direction: column;
+      }
+
+      .email-input {
+        border-right: 1px solid #d4cfc7;
+        border-bottom: none;
+      }
+
+      .cta-btn {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <p class="wordmark">Chatbook</p>
+        <h1 class="headline">A coffee table book for your unhinged group chat.</h1>
+        <p class="subhead">Your group chat is funnier than anything written by a writers room. Prove it.</p>
+      </div>
+    </section>
+
+    <div class="container">
+      <hr class="rule" />
+
+      <p class="body-copy">
+        Your inside jokes deserve better than a server farm. Chatbook turns your most chaotic text threads into a premium hardcover book that actually exists in the world.
+      </p>
+
+      <ul class="for-lines">
+        <li>For the group that has said "we should write a book" about themselves</li>
+        <li>For inside jokes that deserve to outlive the phone they're on</li>
+      </ul>
+
+      <hr class="rule" />
+
+      <section class="how-it-works">
+        <p class="section-label">How it works</p>
+        <ol class="steps">
+          <li><span>Submit your chat export and assign everyone a nickname</span></li>
+          <li><span>We format it into a beautiful hardcover book</span></li>
+          <li><span>It ships directly to everyone who wants a copy</span></li>
+        </ol>
+      </section>
+
+      <hr class="rule" />
+
+      <section class="cta-section">
+        <form class="email-form" onsubmit="return false;">
+          <input class="email-input" type="email" placeholder="your@email.com" />
+          <button class="email-submit" type="submit">Get Early Access</button>
+        </form>
+        <a href="#" class="cta-btn">Start My Chatbook →</a>
+        <p class="consent">Do not buy this book if your friends aren't cool with it.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      &copy; 2026 Chatbook
+    </div>
+  </footer>
+
+</body>
+</html>
