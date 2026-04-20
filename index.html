@@ -223,6 +223,41 @@
       margin-top: 2rem;
     }
 
+    .buy-section {
+      margin-top: 2.5rem;
+      text-align: center;
+    }
+
+    .buy-section hr {
+      border: none;
+      border-top: 1px solid #d4cfc7;
+      margin-bottom: 2rem;
+    }
+
+    .buy-section p {
+      font-size: 1rem;
+      color: #2e2e2e;
+      margin-bottom: 1.25rem;
+      font-style: italic;
+    }
+
+    .buy-btn {
+      display: inline-block;
+      background-color: #8B0000;
+      color: var(--cream);
+      font-family: Georgia, serif;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+      padding: 1rem 2.5rem;
+      text-decoration: none;
+      border: 2px solid #C9A84C;
+      transition: background-color 0.15s ease;
+    }
+
+    .buy-btn:hover {
+      background-color: #6e0000;
+    }
+
     /* FOOTER */
     footer {
       padding: 3rem 0;
@@ -249,6 +284,11 @@
       }
 
       .cta-btn {
+        width: 100%;
+        text-align: center;
+      }
+
+      .buy-btn {
         width: 100%;
         text-align: center;
       }
@@ -298,6 +338,12 @@
           <button class="email-submit" type="submit">Get Early Access</button>
         </form>
         <p class="consent">Do not buy this book if your friends aren't cool with it.</p>
+
+        <div class="buy-section">
+          <hr />
+          <p>Ready to make yours?</p>
+          <a class="buy-btn" href="https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00">Start My Chatbook &rarr;</a>
+        </div>
       </section>
     </div>
   </main>
