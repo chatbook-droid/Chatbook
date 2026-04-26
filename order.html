@@ -339,8 +339,8 @@
       return (
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Platform</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Where does your group live?</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>We support WhatsApp now — more platforms coming soon.</p>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Where does your group chat live?</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Start with WhatsApp. More platforms are on the way — tell us which ones matter to you.</p>
 
           {/* 2×3 platform grid */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:32 }}>
@@ -383,7 +383,7 @@
                   "Open WhatsApp and go to the group chat.",
                   "Tap the group name at the top to open group info.",
                   "Scroll down and tap Export Chat.",
-                  "Choose Without Media to keep the file small.",
+                  "Choose With Media to include photos and videos.",
                   "Save or share the .zip file, then upload it below.",
                 ].map((s,i) => (
                   <div key={i} style={{ display:"flex", gap:10, marginBottom:6 }}>
@@ -553,8 +553,8 @@
       return (
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Name your book</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>What's this book called?</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>This will appear on the cover and spine of your book.</p>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Give this chat a title.</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>It'll be embossed on the cover and spine. Make it something you'd be proud to put on a shelf.</p>
 
           {/* Live book preview — updates as user types */}
           <div style={{ marginBottom:36 }}>
@@ -578,7 +578,7 @@
               style={{ ...inputStyle, width:80 }}
             />
             <div style={{ marginTop:8, fontSize:12, fontWeight:300, color:"#bbb", lineHeight:1.5 }}>
-              Season 1 is the most common choice — you can always make Season 2 later.
+              Most people start at Season 1. You can always come back for Season 2.
             </div>
           </div>
 
@@ -629,8 +629,8 @@
       return (
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Cover design</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Choose your cover.</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Pick a color and foil finish. This is exactly what will be printed.</p>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Dress it up.</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Pick a cloth color and foil finish. What you see here is exactly what gets printed.</p>
 
           <div style={{ marginBottom:40 }}>
             <Book cover={vibe.cover} spine={vibe.spine} foilColor={foil.color} title={data.bookName} season={data.season} />
@@ -710,9 +710,9 @@
 
       return (
         <div>
-          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Nicknames</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Who's in this book?</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Give everyone a nickname — or keep their real names. Your call.</p>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Cast of characters</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Who's in this story?</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>We found everyone in the chat. Give them a nickname, or leave their names as-is — either way, they'll be immortalized in print.</p>
 
           <div style={{ marginBottom:8 }}>
             <div style={{ display:"flex", gap:8, marginBottom:12 }}>
@@ -872,10 +872,10 @@
       const [chapters, setChapters] = useState(() => {
         if (data.chapters && data.chapters.length > 0) return data.chapters;
         const dates = parseMessageDates(data.chatText || "");
-        if (dates.length === 0) return [{ title:"Chapter 1", dateRange:"" }];
+        if (dates.length === 0) return [{ title:"Season 1", dateRange:"" }];
         const raw = buildEpisodes(dates, 14);
         const merged = mergeEpisodes(raw, 8);
-        return episodesToChapters(merged);
+        return episodesToChapters(merged).map((ch, i) => ({ ...ch, title: `Season ${i + 1}` }));
       });
 
       // Summary stats derived once from chatText
@@ -885,7 +885,7 @@
         const months = spanMonths(dates[0], dates[dates.length - 1]);
         const raw = buildEpisodes(dates, 14);
         const merged = mergeEpisodes(raw, 8);
-        return `Your chat spans ${months} month${months !== 1 ? "s" : ""} across ${merged.length} episode${merged.length !== 1 ? "s" : ""}.`;
+        return `Your chat spans ${months} month${months !== 1 ? "s" : ""} — we've split it into ${merged.length} season${merged.length !== 1 ? "s" : ""}.`;
       });
 
       const [dedication, setDedication] = useState(data.dedication || "");
@@ -902,9 +902,9 @@
 
       return (
         <div>
-          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Chapters</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>How does the story break down?</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom: summaryLine ? 16 : 28, lineHeight:1.7 }}>We auto-detected chapter breaks based on gaps in your chat. Rename them however you like.</p>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Seasons</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>How does your story break into seasons?</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom: summaryLine ? 16 : 28, lineHeight:1.7 }}>We auto-detected natural breaks in your chat. Rename each season however you like — or keep it simple.</p>
 
           {summaryLine && (
             <div style={{ marginBottom:28, padding:"12px 16px", background:"#f7f7f7", border:"1px solid #e8e8e8" }}>
@@ -917,8 +917,8 @@
               <div key={i} style={{ border:"1px solid #e0e0e0", padding:"20px 20px 16px", background:"#fafafa" }}>
                 <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:"#e8e8e8", fontWeight:700, lineHeight:1, marginBottom:12 }}>{i+1}</div>
                 <div style={{ marginBottom:10 }}>
-                  <FieldLabel>Chapter title</FieldLabel>
-                  <input type="text" value={ch.title} placeholder={`Chapter ${i+1}`}
+                  <FieldLabel>Season title</FieldLabel>
+                  <input type="text" value={ch.title} placeholder={`Season ${i+1}`}
                     onChange={e => setChapterField(i,"title",e.target.value)}
                     style={inputStyle} />
                 </div>
@@ -929,9 +929,9 @@
             ))}
           </div>
 
-          <button onClick={() => setChapters(chs => [...chs, { title:`Chapter ${chs.length+1}`, dateRange:"" }])}
+          <button onClick={() => setChapters(chs => [...chs, { title:`Season ${chs.length+1}`, dateRange:"" }])}
             style={{ background:"none", border:"1px dashed #ddd", padding:"10px 20px", fontSize:13, color:"#aaa", cursor:"pointer", fontFamily:"'DM Sans',sans-serif", width:"100%", marginBottom:32 }}>
-            + Add chapter
+            + Add season
           </button>
 
           {/* Dedication */}
@@ -987,9 +987,9 @@
 
       return (
         <div>
-          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Preview</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Here's your cover.</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>We'll send a full PDF proof before anything goes to print.</p>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Almost there</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Looking good.</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>This is your cover. We'll send a full PDF proof to review before anything goes to print — no surprises.</p>
 
           <div style={{ marginBottom:40 }}>
             <Book cover={cover} spine={spine} foilColor={foilColor} title={data.bookName} season={data.season} />
@@ -997,7 +997,7 @@
 
           <div style={{ padding:"20px 24px", background:"#fafafa", border:"1px solid #f0f0f0", marginBottom:28 }}>
             <div style={{ fontSize:14, fontWeight:500, color:"#111", marginBottom:8 }}>What happens next</div>
-            <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.7 }}>Your proof will be ready within 48 hours. We'll email it to you before anything goes to print. You'll have a chance to review and request changes.</div>
+            <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.7 }}>After you order, we'll process your chat and email you a full PDF proof within 48 hours. You review it, request any changes, and only then does it go to print. We don't rush the important stuff.</div>
           </div>
 
           <div style={{ marginBottom:8 }}>
@@ -1110,8 +1110,8 @@
       return (
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Checkout</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Almost done.</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Review your order and enter shipping details.</p>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Let's make it real.</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Tell us where to ship it. You'll get a proof before anything prints.</p>
 
           <div style={{ border:"1px solid #f0f0f0", marginBottom:28 }}>
             <div style={{ padding:"16px 20px", borderBottom:"1px solid #f0f0f0", background:"#fafafa" }}>
