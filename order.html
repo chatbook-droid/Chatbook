@@ -748,10 +748,10 @@
     }
 
     // ══════════════════════════════════════════════
-    // SCREEN 5 — Chapters + Customization
+    // SCREEN 5 — Episodes + Customization
     // Parses real timestamps from chatText to find
     // natural episode breaks (14+ day gaps), then
-    // auto-generates chapter cards with actual date
+    // displays a read-only episode list with date
     // ranges. Merges down to ≤8 episodes if needed.
     // ══════════════════════════════════════════════
 
@@ -852,13 +852,13 @@
       return eps;
     }
 
-    // Convert episodes to chapter objects with default title = date range label.
-    function episodesToChapters(episodes) {
+    // Convert episodes to display objects with a date range label.
+    function episodesToDisplayList(episodes) {
       return episodes.map(ep => {
         const label = fmtMonthYear(ep.start) === fmtMonthYear(ep.end)
           ? fmtMonthYear(ep.start)
           : fmtMonthYear(ep.start) + " – " + fmtMonthYear(ep.end);
-        return { title: label, dateRange: label, _start: ep.start, _end: ep.end };
+        return { dateRange: label };
       });
     }
 
@@ -868,71 +868,56 @@
     }
 
     function Screen5({ data, setData, onBack, onNext }) {
-      // Derive chapters from chatText on first render; fall back to saved chapters.
-      const [chapters, setChapters] = useState(() => {
-        if (data.chapters && data.chapters.length > 0) return data.chapters;
+      // Compute episodes and summary once from chatText
+      const [episodes] = useState(() => {
         const dates = parseMessageDates(data.chatText || "");
-        if (dates.length === 0) return [{ title:"Season 1", dateRange:"" }];
+        if (dates.length === 0) return [];
         const raw = buildEpisodes(dates, 14);
         const merged = mergeEpisodes(raw, 8);
-        return episodesToChapters(merged).map((ch, i) => ({ ...ch, title: `Season ${i + 1}` }));
+        return episodesToDisplayList(merged);
       });
 
-      // Summary stats derived once from chatText
       const [summaryLine] = useState(() => {
         const dates = parseMessageDates(data.chatText || "");
         if (dates.length < 2) return null;
         const months = spanMonths(dates[0], dates[dates.length - 1]);
         const raw = buildEpisodes(dates, 14);
         const merged = mergeEpisodes(raw, 8);
-        return `Your chat spans ${months} month${months !== 1 ? "s" : ""} — we've split it into ${merged.length} season${merged.length !== 1 ? "s" : ""}.`;
+        return `Your chat spans ${months} month${months !== 1 ? "s" : ""}. We've organized it into ${merged.length} episode${merged.length !== 1 ? "s" : ""}.`;
       });
 
       const [dedication, setDedication] = useState(data.dedication || "");
       const [closingNote, setClosingNote] = useState(data.closingNote || "");
 
-      function setChapterField(i, field, val) {
-        setChapters(chs => chs.map((c,idx) => idx===i ? { ...c, [field]:val } : c));
-      }
-
       function advance() {
-        setData(d => ({ ...d, chapters, dedication, closingNote }));
+        setData(d => ({ ...d, episodes, dedication, closingNote }));
         onNext();
       }
 
       return (
         <div>
-          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Seasons</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>How does your story break into seasons?</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom: summaryLine ? 16 : 28, lineHeight:1.7 }}>We auto-detected natural breaks in your chat. Rename each season however you like — or keep it simple.</p>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Episodes</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Here's how your book is structured.</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom: summaryLine ? 16 : 28, lineHeight:1.7 }}>We've detected natural breaks in your chat and organized them into episodes. Each one becomes a section in the book.</p>
 
           {summaryLine && (
-            <div style={{ marginBottom:28, padding:"12px 16px", background:"#f7f7f7", border:"1px solid #e8e8e8" }}>
-              <div style={{ fontSize:13, fontWeight:400, color:"#555", lineHeight:1.6 }}>{summaryLine}</div>
+            <div style={{ marginBottom:24, padding:"14px 18px", background:"#f7f7f7", border:"1px solid #e8e8e8" }}>
+              <div style={{ fontSize:14, fontWeight:400, color:"#333", lineHeight:1.6 }}>{summaryLine}</div>
             </div>
           )}
 
-          <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:16 }}>
-            {chapters.map((ch, i) => (
-              <div key={i} style={{ border:"1px solid #e0e0e0", padding:"20px 20px 16px", background:"#fafafa" }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:"#e8e8e8", fontWeight:700, lineHeight:1, marginBottom:12 }}>{i+1}</div>
-                <div style={{ marginBottom:10 }}>
-                  <FieldLabel>Season title</FieldLabel>
-                  <input type="text" value={ch.title} placeholder={`Season ${i+1}`}
-                    onChange={e => setChapterField(i,"title",e.target.value)}
-                    style={inputStyle} />
+          {/* Read-only episode list */}
+          {episodes.length > 0 && (
+            <div style={{ marginBottom:36 }}>
+              {episodes.map((ep, i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:16, padding:"12px 0", borderBottom:"1px solid #f0f0f0" }}>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:13, color:"#ddd", fontWeight:700, flexShrink:0, minWidth:20, textAlign:"right" }}>{i + 1}</div>
+                  <div style={{ fontSize:13, fontWeight:400, color:"#555" }}>Episode {i + 1}</div>
+                  <div style={{ marginLeft:"auto", fontSize:12, fontWeight:300, color:"#aaa", letterSpacing:"0.03em" }}>{ep.dateRange}</div>
                 </div>
-                {ch.dateRange && (
-                  <div style={{ fontSize:11, fontWeight:400, color:"#bbb", letterSpacing:"0.05em" }}>{ch.dateRange}</div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <button onClick={() => setChapters(chs => [...chs, { title:`Season ${chs.length+1}`, dateRange:"" }])}
-            style={{ background:"none", border:"1px dashed #ddd", padding:"10px 20px", fontSize:13, color:"#aaa", cursor:"pointer", fontFamily:"'DM Sans',sans-serif", width:"100%", marginBottom:32 }}>
-            + Add season
-          </button>
+              ))}
+            </div>
+          )}
 
           {/* Dedication */}
           <div style={{ marginBottom:24, paddingTop:24, borderTop:"1px solid #f0f0f0" }}>
@@ -989,7 +974,7 @@
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Almost there</div>
           <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Looking good.</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>This is your cover. We'll send a full PDF proof to review before anything goes to print — no surprises.</p>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>This is your cover. Once you order, it ships within 2 weeks.</p>
 
           <div style={{ marginBottom:40 }}>
             <Book cover={cover} spine={spine} foilColor={foilColor} title={data.bookName} season={data.season} />
@@ -997,7 +982,7 @@
 
           <div style={{ padding:"20px 24px", background:"#fafafa", border:"1px solid #f0f0f0", marginBottom:28 }}>
             <div style={{ fontSize:14, fontWeight:500, color:"#111", marginBottom:8 }}>What happens next</div>
-            <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.7 }}>After you order, we'll process your chat and email you a full PDF proof within 48 hours. You review it, request any changes, and only then does it go to print. We don't rush the important stuff.</div>
+            <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.7 }}>Once your order is placed, your book goes straight to print and ships within 2 weeks.</div>
           </div>
 
           <div style={{ marginBottom:8 }}>
@@ -1074,7 +1059,7 @@
           fd.append("dedication",       data.dedication || "");
           fd.append("closing_note",     data.closingNote || "");
           fd.append("nicknames",        JSON.stringify(data.nicknames || {}));
-          fd.append("chapters",         JSON.stringify(data.chapters || []));
+          fd.append("episodes",         JSON.stringify(data.episodes || []));
 
           // also send full order JSON for backward compat / dashboard detail view
           fd.append("order", JSON.stringify({
@@ -1085,7 +1070,7 @@
             quantity: qty, total, shipping_mode: shipMode,
             shipping_address: primaryAddr, multi_addresses: shipMode==="multiple" ? multiAddrs : null,
             dedication: data.dedication, closing_note: data.closingNote,
-            nicknames: data.nicknames, chapters: data.chapters, proof_email: data.proofEmail,
+            nicknames: data.nicknames, episodes: data.episodes, proof_email: data.proofEmail,
             date_mode: data.dateMode, date_from: data.dateFrom, date_to: data.dateTo,
           }));
 
@@ -1111,7 +1096,7 @@
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Checkout</div>
           <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Let's make it real.</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Tell us where to ship it. You'll get a proof before anything prints.</p>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Tell us where to ship it. Your book ships within 2 weeks.</p>
 
           <div style={{ border:"1px solid #f0f0f0", marginBottom:28 }}>
             <div style={{ padding:"16px 20px", borderBottom:"1px solid #f0f0f0", background:"#fafafa" }}>
