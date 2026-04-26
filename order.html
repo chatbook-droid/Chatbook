@@ -154,7 +154,8 @@
 
     // ── Shared UI primitives ──
 
-    function Book({ cover, spine, foilColor, title, season }) {
+    // Fix 3: added dateRange prop — displays below season label on book face
+    function Book({ cover, spine, foilColor, title, season, dateRange }) {
       return (
         <div style={{ perspective:"900px", display:"flex", justifyContent:"center" }}>
           <div style={{
@@ -169,9 +170,10 @@
               <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.012) 2px,rgba(255,255,255,0.012) 4px),repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(255,255,255,0.008) 3px,rgba(255,255,255,0.008) 6px)" }} />
               <div style={{ position:"absolute", inset:12, border:"1px solid rgba(255,255,255,0.13)" }} />
               <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", padding:28 }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:foilColor, lineHeight:1.2, marginBottom:8, transition:"color 0.4s" }}>{title || "The Originals"}</div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:foilColor, lineHeight:1.2, marginBottom:8, transition:"color 0.4s" }}>{title || "Your Book"}</div>
                 <div style={{ width:28, height:1, background:foilColor+"55", margin:"0 auto 8px" }} />
                 <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:8, fontWeight:400, letterSpacing:"0.22em", textTransform:"uppercase", color:foilColor+"88" }}>Season {season || 1}</div>
+                {dateRange && <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:7, fontWeight:300, letterSpacing:"0.12em", color:foilColor+"66", marginTop:5 }}>{dateRange}</div>}
               </div>
               <div style={{ position:"absolute", bottom:14, left:0, right:0, textAlign:"center", fontFamily:"'DM Sans',sans-serif", fontSize:7, letterSpacing:"0.3em", textTransform:"uppercase", color:"rgba(255,255,255,0.18)" }}>Chatbook</div>
               <div style={{ position:"absolute", right:-5, top:3, width:6, height:314, backgroundImage:"repeating-linear-gradient(to bottom,#ece4d8 0px,#ece4d8 1px,#f4ece0 1px,#f4ece0 3px)", borderRadius:"0 2px 2px 0" }} />
@@ -375,6 +377,7 @@
 
     // ══════════════════════════════════════════════
     // SCREEN 2 — Name your book
+    // Fix 3: live book preview wired to local state
     // ══════════════════════════════════════════════
     function Screen2({ data, setData, onBack, onNext }) {
       const [name, setName] = useState(data.bookName || "");
@@ -391,6 +394,22 @@
         }
       }, []);
 
+      // Compute live date range string for book face
+      function dateRangeLabel() {
+        if (dateMode === "all") return "All messages";
+        const parts = [];
+        if (dateFrom) parts.push(dateFrom);
+        if (dateTo) parts.push(dateTo);
+        if (parts.length === 2) return parts[0] + " – " + parts[1];
+        if (parts.length === 1) return "From " + parts[0];
+        return "Custom range";
+      }
+
+      // Use cover/foil from data if already chosen, else defaults
+      const previewCover = data.coverColor || VIBES[0].cover;
+      const previewSpine = data.spineColor || VIBES[0].spine;
+      const previewFoil  = data.foilColor  || VIBES[0].gold;
+
       function advance() {
         if (!name.trim()) { setError("Please enter a name for your book."); return; }
         setData(d => ({ ...d, bookName:name.trim(), season, dateMode, dateFrom, dateTo }));
@@ -402,6 +421,12 @@
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Name your book</div>
           <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>What's this book called?</h2>
           <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>This will appear on the cover and spine of your book.</p>
+
+          {/* Live book preview — updates as user types */}
+          <div style={{ marginBottom:36 }}>
+            <Book cover={previewCover} spine={previewSpine} foilColor={previewFoil}
+              title={name || "Your Book"} season={season} dateRange={dateRangeLabel()} />
+          </div>
 
           <div style={{ marginBottom:24 }}>
             <FieldLabel>Group chat name</FieldLabel>
@@ -514,16 +539,14 @@
 
     // ══════════════════════════════════════════════
     // SCREEN 4 — Nicknames
+    // Fix 2: removed "your name in this chat" — neutral flat perspective
     // ══════════════════════════════════════════════
     function Screen4({ data, setData, onBack, onNext }) {
       const participants = data.participants || ["Alex Johnson","Sam Rivera","Jordan Lee","Casey Kim"];
       const [nicknames, setNicknames] = useState(() => data.nicknames || Object.fromEntries(participants.map(p => [p, p])));
-      const [myName, setMyName] = useState(data.myName || participants[0] || "");
-      const [error, setError] = useState("");
 
       function advance() {
-        if (!myName) { setError("Please select your name."); return; }
-        setData(d => ({ ...d, nicknames, myName }));
+        setData(d => ({ ...d, nicknames }));
         onNext();
       }
 
@@ -532,16 +555,6 @@
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Nicknames</div>
           <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Who's in this book?</h2>
           <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Give everyone a nickname — or keep their real names. Your call.</p>
-
-          <div style={{ marginBottom:28 }}>
-            <FieldLabel>Your name in this chat</FieldLabel>
-            <select value={myName} onChange={e => { setMyName(e.target.value); setError(""); }}
-              style={{ width:"100%", padding:"11px 14px", border:"1px solid #e0e0e0", fontSize:14, fontWeight:300, color:"#111", fontFamily:"'DM Sans',sans-serif", background:"#fff" }}>
-              <option value="">Select your name…</option>
-              {participants.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <ErrorMsg msg={error} />
-          </div>
 
           <div style={{ marginBottom:8 }}>
             <div style={{ display:"flex", gap:8, marginBottom:12 }}>
@@ -553,7 +566,6 @@
               <div key={p} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"center" }}>
                 <div style={{ flex:1, padding:"11px 14px", background:"#fafafa", border:"1px solid #f0f0f0", fontSize:13, fontWeight:300, color:"#888" }}>{p}</div>
                 <div style={{ fontSize:16, color:"#ddd", flexShrink:0 }}>→</div>
-                {/* BUG 2 FIX: use uncontrolled input with defaultValue + onBlur to avoid cursor-drop on controlled re-render */}
                 <input
                   type="text"
                   defaultValue={nicknames[p] || p}
@@ -770,7 +782,6 @@
           fd.append("shipping_state",   primaryAddr.state);
           fd.append("shipping_zip",     primaryAddr.zip);
           fd.append("shipping_country", primaryAddr.country || "US");
-          fd.append("my_name",          data.myName || "");
           fd.append("dedication",       data.dedication || "");
           fd.append("closing_note",     data.closingNote || "");
           fd.append("nicknames",        JSON.stringify(data.nicknames || {}));
@@ -784,7 +795,7 @@
             cover_hex: data.coverColor || vibe.cover, foil_color: data.foilLabel || foil.label,
             quantity: qty, total, shipping_mode: shipMode,
             shipping_address: primaryAddr, multi_addresses: shipMode==="multiple" ? multiAddrs : null,
-            my_name: data.myName, dedication: data.dedication, closing_note: data.closingNote,
+            dedication: data.dedication, closing_note: data.closingNote,
             nicknames: data.nicknames, chapters: data.chapters, proof_email: data.proofEmail,
             date_mode: data.dateMode, date_from: data.dateFrom, date_to: data.dateTo,
           }));
@@ -799,6 +810,7 @@
           });
 
           if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
+          localStorage.removeItem("chatbook_order_draft"); // Fix 1: clear draft on success
           window.location.href = "https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00";
         } catch(e) {
           setError("Something went wrong: " + e.message + ". Please try again or email hello@ourchatbook.com.");
@@ -913,11 +925,50 @@
 
     // ══════════════════════════════════════════════
     // ROOT
+    // Fix 1: localStorage draft save/restore
     // ══════════════════════════════════════════════
+    const DRAFT_KEY = "chatbook_order_draft";
+
     function Builder() {
       const [step, setStep] = useState(1);
       const [data, setData] = useState({});
+      const [draft, setDraft] = useState(null); // non-null = show banner
       const TOTAL = 7;
+
+      // On mount: check for saved draft
+      useEffect(() => {
+        try {
+          const saved = localStorage.getItem(DRAFT_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            // only surface banner if they got past step 1
+            if (parsed && parsed.step > 1 && parsed.data) {
+              setDraft(parsed);
+            }
+          }
+        } catch(e) {}
+      }, []);
+
+      // Persist data + step to localStorage whenever they change
+      // Skip file/chatText (not serializable or too large)
+      useEffect(() => {
+        if (step === 1 && Object.keys(data).length === 0) return;
+        try {
+          const { file, chatText, ...saveable } = data;
+          localStorage.setItem(DRAFT_KEY, JSON.stringify({ data: saveable, step }));
+        } catch(e) {}
+      }, [data, step]);
+
+      function restoreDraft() {
+        setData(draft.data);
+        setStep(draft.step);
+        setDraft(null);
+      }
+
+      function dismissDraft() {
+        localStorage.removeItem(DRAFT_KEY);
+        setDraft(null);
+      }
 
       const next = () => { setStep(s => Math.min(s+1,TOTAL)); window.scrollTo(0,0); };
       const back = () => { setStep(s => Math.max(s-1,1)); window.scrollTo(0,0); };
@@ -935,6 +986,25 @@
       return (
         <div style={{ background:"#fff", minHeight:"100vh", fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:"#111" }}>
           <Nav />
+
+          {/* Draft restore banner */}
+          {draft && (
+            <div style={{ background:"#111", padding:"14px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+              <div>
+                <span style={{ fontSize:13, fontWeight:500, color:"#fff" }}>Continue where you left off</span>
+                {draft.data.bookName && <span style={{ fontSize:12, fontWeight:300, color:"#aaa", marginLeft:8 }}>— {draft.data.bookName}</span>}
+              </div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={restoreDraft} style={{ padding:"8px 18px", background:"#fff", color:"#111", border:"none", fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                  Resume (step {draft.step} of {TOTAL})
+                </button>
+                <button onClick={dismissDraft} style={{ padding:"8px 12px", background:"none", color:"#888", border:"1px solid #444", fontSize:12, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                  Start over
+                </button>
+              </div>
+            </div>
+          )}
+
           <ProgressBar step={step} total={TOTAL} />
           <div style={{ maxWidth:600, margin:"0 auto", padding:"40px 24px 80px" }}>
             {screens[step-1]}
