@@ -509,14 +509,28 @@
 
       useEffect(() => {
         if (!name && data.file) {
-          const raw = data.file.name.replace(/\.zip$/i,"").replace(/[_-]/g," ").replace(/whatsapp chat with /i,"").trim();
+          const raw = data.file.name
+            .replace(/\.zip$/i, "")
+            .replace(/^whatsapp chat\s*[-–]\s*/i, "")
+            .replace(/^whatsapp chat with\s*/i, "")
+            .replace(/[_]/g, " ")
+            .trim();
           setName(raw);
         }
       }, []);
 
       // Compute live date range string for book face
       function dateRangeLabel() {
-        if (dateMode === "all") return "All messages";
+        if (dateMode === "all") {
+          const dates = parseMessageDates(data.chatText || "");
+          if (dates.length >= 2) {
+            const first = dates[0];
+            const last  = dates[dates.length - 1];
+            const fmt = d => MONTH_NAMES[d.getMonth()] + " " + d.getFullYear();
+            return fmt(first) === fmt(last) ? fmt(first) : fmt(first) + " – " + fmt(last);
+          }
+          return "All messages";
+        }
         const parts = [];
         if (dateFrom) parts.push(dateFrom);
         if (dateTo) parts.push(dateTo);
@@ -558,10 +572,13 @@
 
           <div style={{ marginBottom:32 }}>
             <FieldLabel>Season number</FieldLabel>
-            <div style={{ display:"flex", gap:8 }}>
-              {[1,2,3,4,5].map(n => (
-                <button key={n} onClick={() => setSeason(n)} style={{ width:44, height:44, border:season===n?"2px solid #111":"1px solid #e0e0e0", background:season===n?"#111":"#fff", color:season===n?"#fff":"#555", fontSize:14, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>{n}</button>
-              ))}
+            <input
+              type="number" min="1" max="99" value={season}
+              onChange={e => setSeason(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              style={{ ...inputStyle, width:80 }}
+            />
+            <div style={{ marginTop:8, fontSize:12, fontWeight:300, color:"#bbb", lineHeight:1.5 }}>
+              Season 1 is the most common choice — you can always make Season 2 later.
             </div>
           </div>
 
@@ -661,8 +678,29 @@
     // SCREEN 4 — Nicknames
     // Fix 2: removed "your name in this chat" — neutral flat perspective
     // ══════════════════════════════════════════════
+    // Normalize a string for fuzzy comparison: lowercase, strip spaces + punctuation
+    function normStr(s) {
+      return (s || "").toLowerCase().replace(/[\s\-_.,'"!?]+/g, "");
+    }
+
     function Screen4({ data, setData, onBack, onNext }) {
-      const participants = data.participants || ["Alex Johnson","Sam Rivera","Jordan Lee","Casey Kim"];
+      const rawParticipants = data.participants || ["Alex Johnson","Sam Rivera","Jordan Lee","Casey Kim"];
+
+      // Build a set of normalized strings to filter out:
+      // the book name and the filename stem (without prefix/extension)
+      const filterNorms = new Set();
+      if (data.bookName) filterNorms.add(normStr(data.bookName));
+      if (data.file) {
+        const stem = data.file.name
+          .replace(/\.zip$/i, "")
+          .replace(/^whatsapp chat\s*[-–]\s*/i, "")
+          .replace(/^whatsapp chat with\s*/i, "")
+          .trim();
+        if (stem) filterNorms.add(normStr(stem));
+      }
+
+      const participants = rawParticipants.filter(p => !filterNorms.has(normStr(p)));
+
       const [nicknames, setNicknames] = useState(() => data.nicknames || Object.fromEntries(participants.map(p => [p, p])));
 
       function advance() {
@@ -680,7 +718,7 @@
             <div style={{ display:"flex", gap:8, marginBottom:12 }}>
               <div style={{ flex:1, fontSize:10, fontWeight:500, letterSpacing:"0.15em", textTransform:"uppercase", color:"#aaa" }}>Original name</div>
               <div style={{ width:20 }} />
-              <div style={{ flex:1, fontSize:10, fontWeight:500, letterSpacing:"0.15em", textTransform:"uppercase", color:"#aaa" }}>Nickname in book</div>
+              <div style={{ flex:1, fontSize:10, fontWeight:500, letterSpacing:"0.15em", textTransform:"uppercase", color:"#aaa" }}>Name in book</div>
             </div>
             {participants.map(p => (
               <div key={p} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"center" }}>
@@ -772,11 +810,36 @@
       return episodes;
     }
 
-    // Merge the two shortest (by duration) adjacent episodes until count ≤ MAX.
-    function mergeEpisodes(episodes, MAX = 8) {
+    const MIN_EP_DAYS = 21;
+    const DAY_MS = 1000 * 60 * 60 * 24;
+
+    // Merge any episode shorter than MIN_EP_DAYS into the shorter of its neighbors.
+    function enforceMinDuration(episodes) {
       let eps = episodes.slice();
+      let changed = true;
+      while (changed && eps.length > 1) {
+        changed = false;
+        for (let i = 0; i < eps.length; i++) {
+          const dur = (eps[i].end - eps[i].start) / DAY_MS;
+          if (dur < MIN_EP_DAYS) {
+            // merge with the neighbor that produces the shorter combined episode
+            const mergeLeft  = i > 0 ? (eps[i].end - eps[i - 1].start) / DAY_MS : Infinity;
+            const mergeRight = i < eps.length - 1 ? (eps[i + 1].end - eps[i].start) / DAY_MS : Infinity;
+            const idx = mergeLeft <= mergeRight ? i - 1 : i;
+            const merged = { start: eps[idx].start, end: eps[idx + 1].end };
+            eps.splice(idx, 2, merged);
+            changed = true;
+            break; // restart scan after any merge
+          }
+        }
+      }
+      return eps;
+    }
+
+    // Merge the shortest adjacent pair until count ≤ MAX.
+    function mergeEpisodes(episodes, MAX = 8) {
+      let eps = enforceMinDuration(episodes);
       while (eps.length > MAX) {
-        // find the pair of adjacent episodes whose merged span is smallest
         let minSpan = Infinity, minIdx = 0;
         for (let i = 0; i < eps.length - 1; i++) {
           const span = eps[i + 1].end - eps[i].start;
