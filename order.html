@@ -3,1684 +3,948 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Start My Chatbook</title>
+  <title>Build Your Chatbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    :root {
-      --ink: #1a1a1a;
-      --cream: #f7f4ef;
-      --warm-gray: #9a9488;
-      --crimson: #8B0000;
-      --gold: #C9A84C;
-      --navy: #1a2744;
-      --forest: #2d5a27;
-      --tan: #c4a882;
-    }
-
-    html { font-size: 16px; }
-
-    body {
-      background-color: var(--cream);
-      color: var(--ink);
-      font-family: Georgia, 'Times New Roman', serif;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-      min-height: 100vh;
-    }
-
-    /* HEADER */
-    .site-header {
-      background-color: var(--crimson);
-      padding: 1.25rem 2rem;
-      text-align: center;
-    }
-
-    .wordmark {
-      font-family: Georgia, serif;
-      font-size: 0.85rem;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--gold);
-      text-decoration: none;
-    }
-
-    /* CONTAINER */
-    .container {
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-    }
-
-    /* PROGRESS BAR */
-    .progress-wrap {
-      background: #fff;
-      border-bottom: 1px solid #e0dbd3;
-      padding: 1.25rem 1.5rem 0;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .progress-steps {
-      display: flex;
-      align-items: center;
-      max-width: 680px;
-      margin: 0 auto 1.25rem;
-      gap: 0;
-    }
-
-    .progress-step {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex: 1;
-      position: relative;
-    }
-
-    .progress-step:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      top: 14px;
-      left: 50%;
-      width: 100%;
-      height: 2px;
-      background: #e0dbd3;
-      z-index: 0;
-    }
-
-    .progress-step.completed:not(:last-child)::after {
-      background: var(--crimson);
-    }
-
-    .step-dot {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: 2px solid #d4cfc7;
-      background: var(--cream);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-      color: var(--warm-gray);
-      position: relative;
-      z-index: 1;
-      transition: all 0.2s ease;
-    }
-
-    .progress-step.active .step-dot {
-      border-color: var(--crimson);
-      background: var(--crimson);
-      color: var(--cream);
-    }
-
-    .progress-step.completed .step-dot {
-      border-color: var(--crimson);
-      background: var(--crimson);
-      color: var(--cream);
-    }
-
-    .step-dot-check::before {
-      content: '✓';
-      font-size: 0.75rem;
-    }
-
-    .step-label {
-      font-size: 0.6rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--warm-gray);
-      margin-top: 0.4rem;
-      text-align: center;
-      white-space: nowrap;
-    }
-
-    .progress-step.active .step-label {
-      color: var(--crimson);
-    }
-
-    /* STEP CONTENT */
-    .step-content {
-      padding: 2.5rem 0 4rem;
-    }
-
-    .step-panel {
-      display: none;
-    }
-
-    .step-panel.active {
-      display: block;
-    }
-
-    .step-heading {
-      font-size: 1.6rem;
-      font-weight: normal;
-      line-height: 1.3;
-      margin-bottom: 0.5rem;
-      color: var(--ink);
-    }
-
-    .step-sub {
-      font-size: 0.95rem;
-      color: var(--warm-gray);
-      font-style: italic;
-      margin-bottom: 2rem;
-    }
-
-    .rule {
-      border: none;
-      border-top: 1px solid #d4cfc7;
-      margin: 2rem 0;
-    }
-
-    /* PLATFORM CARDS */
-    .platform-cards {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .platform-card {
-      border: 2px solid #d4cfc7;
-      background: #fff;
-      padding: 1.5rem 1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.15s ease, background 0.15s ease;
-      user-select: none;
-    }
-
-    .platform-card:hover {
-      border-color: var(--crimson);
-    }
-
-    .platform-card.selected {
-      border-color: var(--crimson);
-      background: #fdf5f5;
-    }
-
-    .platform-card.coming-soon {
-      opacity: 0.7;
-    }
-
-    .platform-icon {
-      font-size: 2rem;
-      margin-bottom: 0.6rem;
-      display: block;
-    }
-
-    .platform-name {
-      font-size: 1rem;
-      color: var(--ink);
-      display: block;
-      margin-bottom: 0.25rem;
-    }
-
-    .platform-note {
-      font-size: 0.72rem;
-      color: var(--warm-gray);
-      font-style: italic;
-    }
-
-    /* COMING SOON PANEL */
-    .coming-soon-panel {
-      display: none;
-      border: 1px solid #d4cfc7;
-      background: #fff;
-      padding: 2rem;
-      text-align: center;
-      margin-top: 1rem;
-    }
-
-    .coming-soon-panel.active {
-      display: block;
-    }
-
-    .coming-soon-panel h3 {
-      font-size: 1.1rem;
-      font-weight: normal;
-      margin-bottom: 0.5rem;
-    }
-
-    .coming-soon-panel p {
-      font-size: 0.9rem;
-      color: var(--warm-gray);
-      font-style: italic;
-      margin-bottom: 1.5rem;
-    }
-
-    /* OTHER PLATFORM */
-    .other-platform-panel {
-      display: none;
-      margin-top: 1rem;
-    }
-
-    .other-platform-panel.active {
-      display: block;
-    }
-
-    /* FORM ELEMENTS */
-    .field-group {
-      margin-bottom: 1.5rem;
-    }
-
-    label {
-      display: block;
-      font-size: 0.75rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--warm-gray);
-      margin-bottom: 0.5rem;
-    }
-
-    input[type="text"],
-    input[type="email"],
-    input[type="number"],
-    input[type="date"],
-    textarea,
-    select {
-      width: 100%;
-      font-family: Georgia, serif;
-      font-size: 0.95rem;
-      padding: 0.8rem 1rem;
-      border: 1px solid #d4cfc7;
-      background: #fff;
-      color: var(--ink);
-      outline: none;
-      transition: border-color 0.15s ease;
-      -webkit-appearance: none;
-      border-radius: 0;
-    }
-
-    input:focus,
-    textarea:focus,
-    select:focus {
-      border-color: var(--crimson);
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 100px;
-    }
-
-    input[type="number"] {
-      max-width: 120px;
-    }
-
-    .inline-fields {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .inline-fields .field-group {
-      flex: 1;
-    }
-
-    /* DATE TOGGLE */
-    .toggle-group {
-      display: flex;
-      border: 1px solid #d4cfc7;
-      overflow: hidden;
-      margin-bottom: 1.5rem;
-    }
-
-    .toggle-option {
-      flex: 1;
-      padding: 0.75rem 1rem;
-      text-align: center;
-      cursor: pointer;
-      font-size: 0.85rem;
-      color: var(--warm-gray);
-      background: #fff;
-      border: none;
-      font-family: Georgia, serif;
-      transition: all 0.15s ease;
-      border-right: 1px solid #d4cfc7;
-    }
-
-    .toggle-option:last-child {
-      border-right: none;
-    }
-
-    .toggle-option.active {
-      background: var(--crimson);
-      color: var(--cream);
-    }
-
-    .date-range-fields {
-      display: none;
-    }
-
-    .date-range-fields.active {
-      display: flex;
-      gap: 1rem;
-    }
-
-    /* CAST FIELDS */
-    .cast-fields {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .cast-field-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .cast-number {
-      font-size: 0.75rem;
-      color: var(--warm-gray);
-      min-width: 1.5rem;
-      text-align: right;
-    }
-
-    /* COLOR SWATCHES */
-    .swatch-group {
-      display: flex;
-      gap: 1.25rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.5rem;
-    }
-
-    .swatch-option {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-    }
-
-    .swatch-circle {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: 3px solid transparent;
-      transition: border-color 0.15s ease, transform 0.15s ease;
-    }
-
-    .swatch-option.selected .swatch-circle {
-      border-color: var(--gold);
-      transform: scale(1.1);
-    }
-
-    .swatch-label {
-      font-size: 0.7rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--warm-gray);
-    }
-
-    /* FOIL OPTIONS */
-    .foil-options {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.5rem;
-    }
-
-    .foil-option {
-      padding: 0.5rem 1.25rem;
-      border: 2px solid #d4cfc7;
-      background: #fff;
-      font-family: Georgia, serif;
-      font-size: 0.85rem;
-      color: var(--ink);
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .foil-option.selected {
-      border-color: var(--crimson);
-      background: #fdf5f5;
-    }
-
-    /* FORMAT OPTIONS */
-    .format-options {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .format-option {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem 1.25rem;
-      border: 2px solid #d4cfc7;
-      background: #fff;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .format-option:hover:not(.disabled) {
-      border-color: var(--crimson);
-    }
-
-    .format-option.selected {
-      border-color: var(--crimson);
-      background: #fdf5f5;
-    }
-
-    .format-option.disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .format-radio {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      border: 2px solid #d4cfc7;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color 0.15s ease;
-    }
-
-    .format-option.selected .format-radio {
-      border-color: var(--crimson);
-    }
-
-    .format-radio-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--crimson);
-      display: none;
-    }
-
-    .format-option.selected .format-radio-dot {
-      display: block;
-    }
-
-    .format-info {
-      flex: 1;
-    }
-
-    .format-name {
-      font-size: 0.95rem;
-      color: var(--ink);
-      display: block;
-    }
-
-    .format-dims {
-      font-size: 0.78rem;
-      color: var(--warm-gray);
-      font-style: italic;
-    }
-
-    .format-price {
-      font-size: 1rem;
-      color: var(--crimson);
-    }
-
-    .coming-soon-badge {
-      font-size: 0.65rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      background: #e0dbd3;
-      color: var(--warm-gray);
-      padding: 0.2rem 0.5rem;
-    }
-
-    /* REVIEW SUMMARY */
-    .summary-block {
-      background: #fff;
-      border: 1px solid #d4cfc7;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 0.6rem 0;
-      border-bottom: 1px solid #f0ece6;
-      font-size: 0.9rem;
-      gap: 1rem;
-    }
-
-    .summary-row:last-child {
-      border-bottom: none;
-    }
-
-    .summary-label {
-      color: var(--warm-gray);
-      font-size: 0.78rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      flex-shrink: 0;
-    }
-
-    .summary-value {
-      text-align: right;
-      color: var(--ink);
-    }
-
-    /* SHIPPING FIELDS */
-    .shipping-section {
-      margin-bottom: 2rem;
-    }
-
-    .section-label {
-      font-size: 0.75rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--warm-gray);
-      margin-bottom: 1.25rem;
-    }
-
-    /* PRIVACY */
-    .privacy-note {
-      font-size: 0.72rem;
-      color: var(--warm-gray);
-      font-style: italic;
-      line-height: 1.6;
-      margin-bottom: 1.5rem;
-      padding: 1rem;
-      border: 1px solid #e0dbd3;
-      background: #fafaf8;
-    }
-
-    /* CONSENT CHECKBOX */
-    .consent-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-      margin-bottom: 2rem;
-      cursor: pointer;
-    }
-
-    .consent-row input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      margin-top: 3px;
-      flex-shrink: 0;
-      accent-color: var(--crimson);
-      cursor: pointer;
-    }
-
-    .consent-text {
-      font-size: 0.85rem;
-      color: #3d3d3d;
-      line-height: 1.5;
-    }
-
-    /* UPLOAD ZONE */
-    .upload-instructions {
-      background: #fff;
-      border: 1px solid #d4cfc7;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      font-size: 0.9rem;
-      line-height: 1.9;
-      color: #2e2e2e;
-    }
-
-    .upload-instructions ol {
-      list-style: decimal;
-      padding-left: 1.25rem;
-    }
-
-    .upload-instructions li {
-      padding: 0.2rem 0;
-    }
-
-    .upload-instructions strong {
-      color: var(--crimson);
-    }
-
-    .drop-zone {
-      border: 2px dashed #d4cfc7;
-      background: #fff;
-      padding: 3rem 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.15s ease, background 0.15s ease;
-      position: relative;
-    }
-
-    .drop-zone:hover,
-    .drop-zone.dragover {
-      border-color: var(--crimson);
-      background: #fdf5f5;
-    }
-
-    .drop-zone input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-      width: 100%;
-      height: 100%;
-      border: none;
-      padding: 0;
-    }
-
-    .drop-icon {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      display: block;
-    }
-
-    .drop-label {
-      font-size: 1rem;
-      color: var(--ink);
-      margin-bottom: 0.35rem;
-    }
-
-    .drop-sub {
-      font-size: 0.78rem;
-      color: var(--warm-gray);
-      font-style: italic;
-    }
-
-    .drop-selected {
-      margin-top: 1rem;
-      font-size: 0.85rem;
-      color: var(--crimson);
-      font-style: italic;
-    }
-
-    /* BUTTONS */
-    .btn-row {
-      display: flex;
-      gap: 1rem;
-      margin-top: 2.5rem;
-      align-items: center;
-    }
-
-    .btn-primary {
-      font-family: Georgia, serif;
-      font-size: 0.95rem;
-      letter-spacing: 0.04em;
-      padding: 0.9rem 2rem;
-      background-color: var(--crimson);
-      color: var(--cream);
-      border: 2px solid var(--gold);
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-      text-decoration: none;
-      display: inline-block;
-    }
-
-    .btn-primary:hover {
-      background-color: #6e0000;
-    }
-
-    .btn-back {
-      font-family: Georgia, serif;
-      font-size: 0.88rem;
-      color: var(--warm-gray);
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0.5rem 0;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-
-    .btn-back:hover {
-      color: var(--ink);
-    }
-
-    .btn-cs-submit {
-      font-family: Georgia, serif;
-      font-size: 0.9rem;
-      padding: 0.75rem 1.5rem;
-      background-color: var(--crimson);
-      color: var(--cream);
-      border: 1px solid var(--gold);
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-      width: 100%;
-      margin-top: 0.5rem;
-    }
-
-    .btn-cs-submit:hover {
-      background-color: #6e0000;
-    }
-
-    /* SUCCESS STATE */
-    .success-panel {
-      display: none;
-      text-align: center;
-      padding: 3rem 1rem;
-    }
-
-    .success-panel.active {
-      display: block;
-    }
-
-    .success-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-    }
-
-    .success-panel h2 {
-      font-size: 1.4rem;
-      font-weight: normal;
-      margin-bottom: 0.75rem;
-    }
-
-    .success-panel p {
-      font-size: 0.95rem;
-      color: var(--warm-gray);
-      font-style: italic;
-    }
-
-    /* ERROR MESSAGE */
-    .field-error {
-      font-size: 0.75rem;
-      color: var(--crimson);
-      margin-top: 0.35rem;
-      font-style: italic;
-    }
-
-    input.error, textarea.error {
-      border-color: var(--crimson);
-    }
-
-    /* UPLOAD ERROR BANNER */
-    .upload-error {
-      display: none;
-      background: #fdf5f5;
-      border: 1px solid var(--crimson);
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-      font-size: 0.88rem;
-      color: var(--crimson);
-      line-height: 1.5;
-    }
-
-    .upload-error.active {
-      display: block;
-    }
-
-    /* LOADING STATE */
-    .pay-loading {
-      display: none;
-      text-align: center;
-      padding: 1.5rem 0;
-    }
-
-    .pay-loading.active {
-      display: block;
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 28px;
-      height: 28px;
-      border: 3px solid #e0dbd3;
-      border-top-color: var(--crimson);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin-bottom: 0.75rem;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .pay-loading p {
-      font-size: 0.88rem;
-      color: var(--warm-gray);
-      font-style: italic;
-    }
-
-    /* FOOTER */
-    footer {
-      padding: 2rem 0;
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--warm-gray);
-      border-top: 1px solid #d4cfc7;
-    }
-
-    /* RESPONSIVE */
-    @media (max-width: 520px) {
-      .platform-cards {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.75rem;
-      }
-
-      .platform-card {
-        padding: 1.1rem 0.6rem;
-      }
-
-      .platform-icon {
-        font-size: 1.6rem;
-      }
-
-      .step-label {
-        display: none;
-      }
-
-      .inline-fields {
-        flex-direction: column;
-        gap: 0;
-      }
-
-      .date-range-fields.active {
-        flex-direction: column;
-      }
-
-      .btn-row {
-        flex-direction: column-reverse;
-        align-items: stretch;
-      }
-
-      .btn-primary {
-        text-align: center;
-      }
-
-      .btn-back {
-        text-align: center;
-      }
-
-      .swatch-group {
-        gap: 1rem;
-      }
-
-      .foil-options {
-        gap: 0.5rem;
-      }
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #fff; font-family: 'DM Sans', sans-serif; }
+    @keyframes bookfloat {
+      0%, 100% { transform: rotateY(-16deg) rotateX(4deg) translateY(0); }
+      50%       { transform: rotateY(-16deg) rotateX(4deg) translateY(-8px); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
 
-  <header class="site-header">
-    <a href="index.html" class="wordmark">Chatbook</a>
-  </header>
+    const VIBES = [
+      { id:"crimson", label:"Crimson", cover:"#6B0000", spine:"#3d0000", gold:"#C9A84C" },
+      { id:"navy",    label:"Navy",    cover:"#1B2A4A", spine:"#0f1a2e", gold:"#D4AF6A" },
+      { id:"forest",  label:"Forest",  cover:"#2D4A35", spine:"#1a2e20", gold:"#C8B97A" },
+      { id:"slate",   label:"Slate",   cover:"#3A3F4A", spine:"#22262f", gold:"#E2C97E" },
+      { id:"plum",    label:"Plum",    cover:"#4A1A4A", spine:"#2e0e2e", gold:"#D4A8D4" },
+      { id:"black",   label:"Black",   cover:"#111111", spine:"#000000", gold:"#C9A84C" },
+      { id:"tan",     label:"Tan",     cover:"#C4A882", spine:"#a08860", gold:"#7a5c2e" },
+      { id:"white",   label:"White",   cover:"#F0EBE0", spine:"#d8d0c0", gold:"#8B6914" },
+    ];
 
-  <!-- PROGRESS BAR -->
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-steps" id="progressSteps">
-      <div class="progress-step active" data-step="1">
-        <div class="step-dot">1</div>
-        <span class="step-label">Platform</span>
-      </div>
-      <div class="progress-step" data-step="2">
-        <div class="step-dot">2</div>
-        <span class="step-label">Upload</span>
-      </div>
-      <div class="progress-step" data-step="3">
-        <div class="step-dot">3</div>
-        <span class="step-label">Details</span>
-      </div>
-      <div class="progress-step" data-step="4">
-        <div class="step-dot">4</div>
-        <span class="step-label">Cast</span>
-      </div>
-      <div class="progress-step" data-step="5">
-        <div class="step-dot">5</div>
-        <span class="step-label">Style</span>
-      </div>
-      <div class="progress-step" data-step="6">
-        <div class="step-dot">6</div>
-        <span class="step-label">Review</span>
-      </div>
-    </div>
-  </div>
+    const FOILS = [
+      { id:"gold",   label:"Gold",   color:"#C9A84C" },
+      { id:"silver", label:"Silver", color:"#C0C0C0" },
+      { id:"white",  label:"White",  color:"#F5F5F5" },
+    ];
 
-  <main>
-    <div class="container">
-      <div class="step-content">
+    // ─────────────────────────────────────────────
+    // BUG 1 FIX: robust WhatsApp name parser
+    // Handles both iOS [MM/DD/YY, H:MM:SS AM] Name: msg
+    // and Android MM/DD/YY, H:MM AM - Name: msg
+    // and Android (EU) DD/MM/YYYY, HH:MM - Name: msg
+    // Reads entire file, strips tildes, skips system lines
+    // ─────────────────────────────────────────────
+    function parseParticipants(text) {
+      const lines = text.split("\n");
 
-        <!-- STEP 1: PLATFORM -->
-        <div class="step-panel active" id="step-1">
-          <h2 class="step-heading">What platform is your chat on?</h2>
-          <p class="step-sub">Choose the app your group uses.</p>
+      // iOS format:  [12/25/23, 10:30:45 AM] Name: message
+      const iosRe = /^\[\d{1,2}\/\d{1,2}\/\d{2,4},\s*\d{1,2}:\d{2}(?::\d{2})?\s*[AaPp][Mm]\]\s*([^:]+?):/;
 
-          <div class="platform-cards">
-            <div class="platform-card" data-platform="whatsapp" onclick="selectPlatform('whatsapp')">
-              <span class="platform-icon">💬</span>
-              <span class="platform-name">WhatsApp</span>
+      // Android US:  12/25/23, 10:30 AM - Name: message
+      // Android EU:  25/12/2023, 10:30 - Name: message
+      // Android 24h: 25/12/2023, 22:30 - Name: message
+      const androidRe = /^\d{1,2}\/\d{1,2}\/\d{2,4},\s*\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?\s*-\s*([^:]+?):/;
+
+      const SYSTEM_PATTERNS = [
+        /^Messages and calls are end-to-end encrypted/i,
+        /joined using this group/i,
+        /was added$/i,
+        /left$/i,
+        /changed the group/i,
+        /changed this group/i,
+        /changed the subject/i,
+        /deleted this message/i,
+        /This message was deleted/i,
+        /security code changed/i,
+        /Your security code/i,
+        /created group/i,
+        /added you$/i,
+        /^\+?[\d\s\(\)\-]{7,}$/, // raw phone number as sender
+      ];
+
+      const nameSet = new Set();
+
+      for (const line of lines) {
+        let match = line.match(iosRe) || line.match(androidRe);
+        if (!match) continue;
+
+        let name = match[1].trim();
+
+        // strip leading tilde (WhatsApp ~ prefix for saved contacts)
+        name = name.replace(/^~+/, "").trim();
+
+        // skip empty or implausibly long names
+        if (!name || name.length > 60) continue;
+
+        // skip system messages masquerading as senders
+        const isSystem = SYSTEM_PATTERNS.some(re => re.test(name));
+        if (isSystem) continue;
+
+        // skip pure-digit strings (timestamps leaking through)
+        if (/^\d+$/.test(name)) continue;
+
+        nameSet.add(name);
+      }
+
+      return [...nameSet];
+    }
+
+    // ─────────────────────────────────────────────
+    // BUG 2 FIX: AddrForm defined at module level so
+    // React never unmounts it during Screen7 re-renders
+    // ─────────────────────────────────────────────
+    function AddrForm({ addr, onChange, label }) {
+      return (
+        <div style={{ border:"1px solid #e0e0e0", padding:16, marginBottom:12 }}>
+          {label && <div style={{ fontSize:12, fontWeight:500, color:"#aaa", letterSpacing:"0.1em", marginBottom:12 }}>{label}</div>}
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            <input
+              type="text" value={addr.name} placeholder="Full name"
+              onChange={e => onChange("name", e.target.value)}
+              style={inputStyle}
+            />
+            <input
+              type="text" value={addr.line1} placeholder="Street address"
+              onChange={e => onChange("line1", e.target.value)}
+              style={inputStyle}
+            />
+            <input
+              type="text" value={addr.line2||""} placeholder="Apt, suite, etc. (optional)"
+              onChange={e => onChange("line2", e.target.value)}
+              style={inputStyle}
+            />
+            <div style={{ display:"flex", gap:8 }}>
+              <input type="text" value={addr.city} placeholder="City"
+                onChange={e => onChange("city", e.target.value)}
+                style={{ ...inputStyle, flex:2 }} />
+              <input type="text" value={addr.state} placeholder="State"
+                onChange={e => onChange("state", e.target.value)}
+                style={{ ...inputStyle, flex:1 }} />
+              <input type="text" value={addr.zip} placeholder="ZIP"
+                onChange={e => onChange("zip", e.target.value)}
+                style={{ ...inputStyle, flex:1 }} />
             </div>
-            <div class="platform-card coming-soon" data-platform="imessage" onclick="selectPlatform('imessage')">
-              <span class="platform-icon">🍎</span>
-              <span class="platform-name">iMessage</span>
-              <span class="platform-note">coming soon</span>
-            </div>
-            <div class="platform-card coming-soon" data-platform="discord" onclick="selectPlatform('discord')">
-              <span class="platform-icon">🎮</span>
-              <span class="platform-name">Discord</span>
-              <span class="platform-note">coming soon</span>
-            </div>
-            <div class="platform-card coming-soon" data-platform="other" onclick="selectPlatform('other')">
-              <span class="platform-icon">✦</span>
-              <span class="platform-name">Other</span>
-              <span class="platform-note">let us know</span>
-            </div>
-          </div>
-
-          <!-- iMessage / Discord coming soon -->
-          <div class="coming-soon-panel" id="cs-imessage">
-            <h3>iMessage support is coming soon</h3>
-            <p>Leave your email and we'll notify you when it's ready.</p>
-            <div class="field-group">
-              <label for="cs-email-imessage">Your email</label>
-              <input type="email" id="cs-email-imessage" placeholder="your@email.com" />
-            </div>
-            <button class="btn-cs-submit" onclick="submitComingSoon('imessage')">Notify me</button>
-          </div>
-
-          <div class="coming-soon-panel" id="cs-discord">
-            <h3>Discord support is coming soon</h3>
-            <p>Leave your email and we'll notify you when it's ready.</p>
-            <div class="field-group">
-              <label for="cs-email-discord">Your email</label>
-              <input type="email" id="cs-email-discord" placeholder="your@email.com" />
-            </div>
-            <button class="btn-cs-submit" onclick="submitComingSoon('discord')">Notify me</button>
-          </div>
-
-          <!-- Other platform -->
-          <div class="other-platform-panel" id="cs-other">
-            <div class="field-group">
-              <label for="other-platform-name">Which platform?</label>
-              <input type="text" id="other-platform-name" placeholder="e.g. Telegram, Instagram, Signal..." />
-            </div>
-            <div class="field-group">
-              <label for="cs-email-other">Your email</label>
-              <input type="email" id="cs-email-other" placeholder="your@email.com" />
-            </div>
-            <button class="btn-cs-submit" onclick="submitComingSoon('other')">Notify me</button>
-          </div>
-
-          <!-- Success for coming-soon flows -->
-          <div class="success-panel" id="cs-success">
-            <div class="success-icon">✉️</div>
-            <h2>You're on the list.</h2>
-            <p>We'll reach out as soon as that platform is supported.</p>
-          </div>
-
-          <div class="btn-row" id="step1-next-row" style="display:none;">
-            <button class="btn-primary" onclick="goToStep(2)">Next &rarr;</button>
           </div>
         </div>
+      );
+    }
 
-        <!-- STEP 2: UPLOAD -->
-        <div class="step-panel" id="step-2">
-          <h2 class="step-heading">Upload your chat export</h2>
-          <p class="step-sub">We'll handle the formatting — just get us the file.</p>
-
-          <div class="upload-instructions">
-            <ol>
-              <li>Open <strong>WhatsApp</strong> on your phone</li>
-              <li>Tap the <strong>group name</strong> at the top to open Group Info</li>
-              <li>Scroll down and tap <strong>Export Chat</strong></li>
-              <li>Choose <strong>With Media</strong></li>
-              <li><strong>Share or AirDrop</strong> the .zip file to your computer, then upload it below</li>
-            </ol>
-          </div>
-
-          <div class="drop-zone" id="dropZone">
-            <input type="file" id="chatFile" accept=".zip" onchange="handleFileSelect(event)" />
-            <span class="drop-icon">📁</span>
-            <p class="drop-label">Drop your .zip file here, or click to browse</p>
-            <p class="drop-sub">Accepts .zip files up to 500MB</p>
-            <p class="drop-selected" id="fileSelectedLabel"></p>
-          </div>
-
-          <div class="btn-row">
-            <button class="btn-primary" onclick="validateAndAdvance(2)">Next &rarr;</button>
-            <button class="btn-back" onclick="goToStep(1)">← Back</button>
-          </div>
-        </div>
-
-        <!-- STEP 3: BOOK DETAILS -->
-        <div class="step-panel" id="step-3">
-          <h2 class="step-heading">Tell us about your book</h2>
-          <p class="step-sub">These details go on the cover and help us frame the story.</p>
-
-          <div class="field-group">
-            <label for="groupName">Group chat name</label>
-            <input type="text" id="groupName" placeholder="e.g. The Degens, HKPC Devils Lot, Family Chaos..." />
-          </div>
-
-          <div class="field-group">
-            <label for="seasonNum">Season number</label>
-            <input type="number" id="seasonNum" value="1" min="1" max="99" />
-          </div>
-
-          <hr class="rule" />
-
-          <label style="margin-bottom:0.75rem;">Date range</label>
-          <div class="toggle-group">
-            <button class="toggle-option active" id="toggle-all" onclick="setDateRange('all')">Include everything</button>
-            <button class="toggle-option" id="toggle-custom" onclick="setDateRange('custom')">Custom date range</button>
-          </div>
-
-          <div class="date-range-fields" id="dateRangeFields">
-            <div class="field-group">
-              <label for="dateFrom">From</label>
-              <input type="date" id="dateFrom" />
-            </div>
-            <div class="field-group">
-              <label for="dateTo">To</label>
-              <input type="date" id="dateTo" />
-            </div>
-          </div>
-
-          <div class="btn-row">
-            <button class="btn-primary" onclick="validateAndAdvance(3)">Next &rarr;</button>
-            <button class="btn-back" onclick="goToStep(2)">← Back</button>
-          </div>
-        </div>
-
-        <!-- STEP 4: THE CAST -->
-        <div class="step-panel" id="step-4">
-          <h2 class="step-heading">The cast</h2>
-          <p class="step-sub">Everyone gets a nickname. Real names stay off the page.</p>
-
-          <div class="field-group">
-            <label for="yourName">Your name as it appears in the chat</label>
-            <input type="text" id="yourName" placeholder="Exactly as WhatsApp shows it..." />
-          </div>
-
-          <hr class="rule" />
-
-          <div class="field-group">
-            <label for="castCount">How many people are in this chat?</label>
-            <input type="number" id="castCount" min="2" max="50" placeholder="e.g. 6" onchange="generateCastFields()" oninput="generateCastFields()" />
-          </div>
-
-          <div class="cast-fields" id="castFields"></div>
-
-          <div class="btn-row">
-            <button class="btn-primary" onclick="validateAndAdvance(4)">Next &rarr;</button>
-            <button class="btn-back" onclick="goToStep(3)">← Back</button>
-          </div>
-        </div>
-
-        <!-- STEP 5: CUSTOMIZATION -->
-        <div class="step-panel" id="step-5">
-          <h2 class="step-heading">Make it yours</h2>
-          <p class="step-sub">Every detail of the cover is up to you.</p>
-
-          <div class="field-group">
-            <label>Cover color</label>
-            <div class="swatch-group" id="coverSwatches">
-              <div class="swatch-option selected" data-color="crimson" onclick="selectSwatch('cover', 'crimson', this)">
-                <div class="swatch-circle" style="background:#8B0000;"></div>
-                <span class="swatch-label">Crimson</span>
-              </div>
-              <div class="swatch-option" data-color="navy" onclick="selectSwatch('cover', 'navy', this)">
-                <div class="swatch-circle" style="background:#1a2744;"></div>
-                <span class="swatch-label">Navy</span>
-              </div>
-              <div class="swatch-option" data-color="black" onclick="selectSwatch('cover', 'black', this)">
-                <div class="swatch-circle" style="background:#111111;"></div>
-                <span class="swatch-label">Black</span>
-              </div>
-              <div class="swatch-option" data-color="forest" onclick="selectSwatch('cover', 'forest', this)">
-                <div class="swatch-circle" style="background:#2d5a27;"></div>
-                <span class="swatch-label">Forest</span>
-              </div>
-              <div class="swatch-option" data-color="tan" onclick="selectSwatch('cover', 'tan', this)">
-                <div class="swatch-circle" style="background:#c4a882; border: 1px solid #d4cfc7;"></div>
-                <span class="swatch-label">Tan</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label>Foil color</label>
-            <div class="foil-options" id="foilOptions">
-              <div class="foil-option selected" data-foil="gold" onclick="selectFoil('gold', this)">Gold</div>
-              <div class="foil-option" data-foil="silver" onclick="selectFoil('silver', this)">Silver</div>
-              <div class="foil-option" data-foil="white" onclick="selectFoil('white', this)">White</div>
-            </div>
-          </div>
-
-          <hr class="rule" />
-
-          <div class="field-group">
-            <label for="dedication">Dedication <span style="font-size:0.7rem;font-style:italic;text-transform:none;letter-spacing:0;">(optional)</span></label>
-            <textarea id="dedication" placeholder="A personal note at the front of the book..."></textarea>
-          </div>
-
-          <div class="field-group">
-            <label for="closingNote">Closing note <span style="font-size:0.7rem;font-style:italic;text-transform:none;letter-spacing:0;">(optional)</span></label>
-            <textarea id="closingNote" placeholder="A final message at the back of the book..."></textarea>
-          </div>
-
-          <hr class="rule" />
-
-          <div class="field-group">
-            <label>Format</label>
-            <div class="format-options">
-              <div class="format-option selected" data-format="standard" onclick="selectFormat('standard', this)">
-                <div class="format-radio"><div class="format-radio-dot"></div></div>
-                <div class="format-info">
-                  <span class="format-name">Standard Hardcover</span>
-                  <span class="format-dims">8.5 × 11 in — premium color, linen wrap</span>
-                </div>
-                <span class="format-price">$89</span>
-              </div>
-              <div class="format-option disabled" data-format="pocket">
-                <div class="format-radio"><div class="format-radio-dot"></div></div>
-                <div class="format-info">
-                  <span class="format-name">Pocket Edition <span class="coming-soon-badge">Coming soon</span></span>
-                  <span class="format-dims">4.25 × 6.875 in</span>
-                </div>
-                <span class="format-price">$39</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="btn-row">
-            <button class="btn-primary" onclick="validateAndAdvance(5)">Next &rarr;</button>
-            <button class="btn-back" onclick="goToStep(4)">← Back</button>
-          </div>
-        </div>
-
-        <!-- STEP 6: REVIEW & PAY -->
-        <div class="step-panel" id="step-6">
-          <h2 class="step-heading">Review your order</h2>
-          <p class="step-sub">Make sure everything looks right before you check out.</p>
-
-          <div class="summary-block" id="orderSummary">
-            <!-- Populated by JS -->
-          </div>
-
-          <hr class="rule" />
-
-          <div class="shipping-section">
-            <p class="section-label">Shipping address</p>
-
-            <div class="field-group">
-              <label for="shipName">Full name</label>
-              <input type="text" id="shipName" placeholder="Name on the package" />
-            </div>
-
-            <div class="field-group">
-              <label for="shipAddr1">Address line 1</label>
-              <input type="text" id="shipAddr1" placeholder="Street address" />
-            </div>
-
-            <div class="field-group">
-              <label for="shipAddr2">Address line 2 <span style="font-size:0.7rem;font-style:italic;text-transform:none;letter-spacing:0;">(optional)</span></label>
-              <input type="text" id="shipAddr2" placeholder="Apt, suite, unit..." />
-            </div>
-
-            <div class="inline-fields">
-              <div class="field-group">
-                <label for="shipCity">City</label>
-                <input type="text" id="shipCity" placeholder="City" />
-              </div>
-              <div class="field-group">
-                <label for="shipState">State / Province</label>
-                <input type="text" id="shipState" placeholder="State" />
-              </div>
-            </div>
-
-            <div class="inline-fields">
-              <div class="field-group">
-                <label for="shipZip">ZIP / Postal code</label>
-                <input type="text" id="shipZip" placeholder="ZIP" />
-              </div>
-              <div class="field-group">
-                <label for="shipCountry">Country</label>
-                <input type="text" id="shipCountry" placeholder="Country" value="United States" />
-              </div>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label for="customerEmail">Your email <span style="font-size:0.7rem;font-style:italic;text-transform:none;letter-spacing:0;">(for order updates)</span></label>
-            <input type="email" id="customerEmail" placeholder="your@email.com" />
-          </div>
-
-          <div class="privacy-note">
-            Your chat data is processed within 48 hours and permanently deleted. We never store your messages.
-          </div>
-
-          <label class="consent-row" for="consentCheck">
-            <input type="checkbox" id="consentCheck" />
-            <span class="consent-text">I confirm my group is cool with this.</span>
-          </label>
-
-          <div class="upload-error" id="uploadError"></div>
-
-          <div class="pay-loading" id="payLoading">
-            <div class="spinner"></div>
-            <p>Uploading your chat — this may take a moment for large files...</p>
-          </div>
-
-          <button class="btn-primary" id="payBtn" onclick="handlePay()">Pay Now &rarr;</button>
-
-          <div class="btn-row" style="margin-top:1rem;">
-            <button class="btn-back" onclick="goToStep(5)">← Back</button>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </main>
-
-  <footer>
-    <div class="container">&copy; 2026 Chatbook</div>
-  </footer>
-
-  <script>
-    // ─── STATE ───────────────────────────────────────────────────────────────
-    const state = {
-      platform: null,
-      file: null,
-      groupName: '',
-      season: 1,
-      dateMode: 'all',
-      dateFrom: '',
-      dateTo: '',
-      yourName: '',
-      castCount: 0,
-      nicknames: [],
-      coverColor: 'crimson',
-      foilColor: 'gold',
-      dedication: '',
-      closingNote: '',
-      format: 'standard',
+    // shared input style used across the file
+    const inputStyle = {
+      width:"100%", padding:"11px 14px", border:"1px solid #e0e0e0",
+      fontSize:14, fontWeight:300, color:"#111", outline:"none",
+      fontFamily:"'DM Sans',sans-serif", background:"#fff",
     };
 
-    let currentStep = 1;
-    const WHATSAPP_STEPS = [1, 2, 3, 4, 5, 6];
+    // ── Shared UI primitives ──
 
-    // ─── PROGRESS ────────────────────────────────────────────────────────────
-    function updateProgress(step) {
-      document.querySelectorAll('.progress-step').forEach(el => {
-        const s = parseInt(el.dataset.step);
-        el.classList.remove('active', 'completed');
-        const dot = el.querySelector('.step-dot');
-        if (s < step) {
-          el.classList.add('completed');
-          dot.innerHTML = '<span class="step-dot-check"></span>';
-        } else if (s === step) {
-          el.classList.add('active');
-          dot.textContent = s;
-        } else {
-          dot.textContent = s;
-        }
-      });
-    }
-
-    // ─── NAVIGATION ──────────────────────────────────────────────────────────
-    function goToStep(step) {
-      document.getElementById('step-' + currentStep).classList.remove('active');
-      currentStep = step;
-      document.getElementById('step-' + step).classList.add('active');
-      updateProgress(step);
-      if (step === 6) populateSummary();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function validateAndAdvance(step) {
-      if (!validate(step)) return;
-      collectStep(step);
-      goToStep(step + 1);
-    }
-
-    // ─── VALIDATION ──────────────────────────────────────────────────────────
-    function validate(step) {
-      clearErrors();
-      if (step === 2) {
-        if (!state.file) {
-          showDropError('Please upload your WhatsApp export .zip file.');
-          return false;
-        }
-      }
-      if (step === 3) {
-        if (!document.getElementById('groupName').value.trim()) {
-          showError('groupName', 'Please enter your group chat name.');
-          return false;
-        }
-      }
-      if (step === 4) {
-        if (!document.getElementById('yourName').value.trim()) {
-          showError('yourName', 'Please enter your name as it appears in the chat.');
-          return false;
-        }
-        const count = parseInt(document.getElementById('castCount').value);
-        if (!count || count < 2) {
-          showError('castCount', 'Please enter the number of people in the chat (minimum 2).');
-          return false;
-        }
-      }
-      if (step === 6) {
-        const required = ['shipName', 'shipAddr1', 'shipCity', 'shipState', 'shipZip', 'shipCountry'];
-        let ok = true;
-        required.forEach(id => {
-          if (!document.getElementById(id).value.trim()) {
-            showError(id, 'Required');
-            ok = false;
-          }
-        });
-        if (!document.getElementById('consentCheck').checked) {
-          alert('Please confirm your group is cool with this.');
-          ok = false;
-        }
-        return ok;
-      }
-      return true;
-    }
-
-    function showError(id, msg) {
-      const el = document.getElementById(id);
-      el.classList.add('error');
-      const err = document.createElement('p');
-      err.className = 'field-error';
-      err.textContent = msg;
-      el.parentNode.insertBefore(err, el.nextSibling);
-    }
-
-    function showDropError(msg) {
-      const dz = document.getElementById('dropZone');
-      dz.style.borderColor = 'var(--crimson)';
-      const err = document.createElement('p');
-      err.className = 'field-error';
-      err.id = 'drop-error';
-      err.textContent = msg;
-      dz.parentNode.insertBefore(err, dz.nextSibling);
-    }
-
-    function clearErrors() {
-      document.querySelectorAll('.field-error').forEach(e => e.remove());
-      document.querySelectorAll('.error').forEach(e => e.classList.remove('error'));
-    }
-
-    // ─── COLLECT STEP DATA ───────────────────────────────────────────────────
-    function collectStep(step) {
-      if (step === 3) {
-        state.groupName = document.getElementById('groupName').value.trim();
-        state.season = document.getElementById('seasonNum').value;
-        state.dateFrom = document.getElementById('dateFrom').value;
-        state.dateTo = document.getElementById('dateTo').value;
-      }
-      if (step === 4) {
-        state.yourName = document.getElementById('yourName').value.trim();
-        state.castCount = parseInt(document.getElementById('castCount').value);
-        state.nicknames = [];
-        document.querySelectorAll('.cast-nickname-input').forEach(inp => {
-          state.nicknames.push(inp.value.trim());
-        });
-      }
-      if (step === 5) {
-        state.dedication = document.getElementById('dedication').value.trim();
-        state.closingNote = document.getElementById('closingNote').value.trim();
-      }
-    }
-
-    // ─── PLATFORM SELECTION ──────────────────────────────────────────────────
-    function selectPlatform(platform) {
-      state.platform = platform;
-
-      document.querySelectorAll('.platform-card').forEach(c => c.classList.remove('selected'));
-      document.querySelector('[data-platform="' + platform + '"]').classList.add('selected');
-
-      document.querySelectorAll('.coming-soon-panel, .other-platform-panel, .success-panel').forEach(p => p.classList.remove('active'));
-
-      document.getElementById('step1-next-row').style.display = 'none';
-
-      if (platform === 'whatsapp') {
-        document.getElementById('step1-next-row').style.display = 'flex';
-      } else if (platform === 'imessage') {
-        document.getElementById('cs-imessage').classList.add('active');
-      } else if (platform === 'discord') {
-        document.getElementById('cs-discord').classList.add('active');
-      } else if (platform === 'other') {
-        document.getElementById('cs-other').classList.add('active');
-      }
-    }
-
-    function submitComingSoon(platform) {
-      let emailId = 'cs-email-' + platform;
-      const email = document.getElementById(emailId).value.trim();
-      if (!email || !email.includes('@')) {
-        alert('Please enter a valid email address.');
-        return;
-      }
-      document.querySelectorAll('.coming-soon-panel, .other-platform-panel').forEach(p => p.classList.remove('active'));
-      document.getElementById('cs-success').classList.add('active');
-      document.querySelectorAll('.platform-card').forEach(c => c.classList.remove('selected'));
-    }
-
-    // ─── FILE UPLOAD ─────────────────────────────────────────────────────────
-    function handleFileSelect(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      if (file.size > 500 * 1024 * 1024) {
-        alert('File is too large. Maximum size is 500MB.');
-        return;
-      }
-      state.file = file;
-      document.getElementById('fileSelectedLabel').textContent = '✓ ' + file.name;
-    }
-
-    const dropZone = document.getElementById('dropZone');
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropZone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file && file.name.endsWith('.zip')) {
-        if (file.size > 500 * 1024 * 1024) { alert('File is too large. Maximum size is 500MB.'); return; }
-        state.file = file;
-        document.getElementById('fileSelectedLabel').textContent = '✓ ' + file.name;
-      } else {
-        alert('Please upload a .zip file.');
-      }
-    });
-
-    // ─── DATE RANGE ──────────────────────────────────────────────────────────
-    function setDateRange(mode) {
-      state.dateMode = mode;
-      document.getElementById('toggle-all').classList.toggle('active', mode === 'all');
-      document.getElementById('toggle-custom').classList.toggle('active', mode === 'custom');
-      document.getElementById('dateRangeFields').classList.toggle('active', mode === 'custom');
-    }
-
-    // ─── CAST FIELDS ─────────────────────────────────────────────────────────
-    function generateCastFields() {
-      const count = parseInt(document.getElementById('castCount').value);
-      const container = document.getElementById('castFields');
-      container.innerHTML = '';
-      if (!count || count < 2 || count > 50) return;
-      for (let i = 1; i <= count; i++) {
-        const row = document.createElement('div');
-        row.className = 'cast-field-row';
-        row.innerHTML = `
-          <span class="cast-number">${i}</span>
-          <input type="text" class="cast-nickname-input" placeholder="Nickname for person ${i}..." />
-        `;
-        container.appendChild(row);
-      }
-    }
-
-    // ─── SWATCHES & OPTIONS ──────────────────────────────────────────────────
-    function selectSwatch(type, value, el) {
-      document.querySelectorAll('#coverSwatches .swatch-option').forEach(s => s.classList.remove('selected'));
-      el.classList.add('selected');
-      state.coverColor = value;
-    }
-
-    function selectFoil(value, el) {
-      document.querySelectorAll('#foilOptions .foil-option').forEach(f => f.classList.remove('selected'));
-      el.classList.add('selected');
-      state.foilColor = value;
-    }
-
-    function selectFormat(value, el) {
-      if (el.classList.contains('disabled')) return;
-      document.querySelectorAll('.format-option').forEach(f => f.classList.remove('selected'));
-      el.classList.add('selected');
-      state.format = value;
-    }
-
-    // ─── SUMMARY ─────────────────────────────────────────────────────────────
-    function populateSummary() {
-      collectStep(4);
-      collectStep(5);
-
-      const coverLabels = { crimson: 'Crimson', navy: 'Navy', black: 'Black', forest: 'Forest Green', tan: 'Tan' };
-      const foilLabels = { gold: 'Gold', silver: 'Silver', white: 'White' };
-
-      let dateStr = 'All messages';
-      if (state.dateMode === 'custom' && state.dateFrom && state.dateTo) {
-        dateStr = state.dateFrom + ' → ' + state.dateTo;
-      } else if (state.dateMode === 'custom' && state.dateFrom) {
-        dateStr = 'From ' + state.dateFrom;
-      }
-
-      let nicknameStr = state.nicknames.filter(n => n).join(', ') || '—';
-
-      const rows = [
-        ['Platform', 'WhatsApp'],
-        ['File', state.file ? state.file.name : '—'],
-        ['Chat name', state.groupName || '—'],
-        ['Season', state.season],
-        ['Date range', dateStr],
-        ['Your name', state.yourName || '—'],
-        ['Cast', state.castCount + ' people'],
-        ['Nicknames', nicknameStr],
-        ['Cover', coverLabels[state.coverColor]],
-        ['Foil', foilLabels[state.foilColor]],
-        ['Format', state.format === 'standard' ? 'Standard Hardcover — $89' : 'Pocket Edition — $39'],
-        state.dedication ? ['Dedication', state.dedication] : null,
-        state.closingNote ? ['Closing note', state.closingNote] : null,
-      ].filter(Boolean);
-
-      const summary = document.getElementById('orderSummary');
-      summary.innerHTML = rows.map(([label, value]) => `
-        <div class="summary-row">
-          <span class="summary-label">${label}</span>
-          <span class="summary-value">${value}</span>
+    function Book({ cover, spine, foilColor, title, season }) {
+      return (
+        <div style={{ perspective:"900px", display:"flex", justifyContent:"center" }}>
+          <div style={{
+            position:"relative", transform:"rotateY(-16deg) rotateX(4deg)",
+            transformStyle:"preserve-3d",
+            filter:"drop-shadow(-12px 20px 36px rgba(0,0,0,0.18))",
+            animation:"bookfloat 5s ease-in-out infinite",
+          }}>
+            <div style={{ position:"absolute", left:-18, top:0, width:18, height:320, background:spine, transform:"rotateY(-90deg) translateX(-9px)", transformOrigin:"right center", borderRadius:"2px 0 0 2px", transition:"background 0.4s" }} />
+            <div style={{ width:240, height:320, borderRadius:"2px 4px 4px 2px", overflow:"hidden", position:"relative" }}>
+              <div style={{ position:"absolute", inset:0, background:cover, transition:"background 0.4s" }} />
+              <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.012) 2px,rgba(255,255,255,0.012) 4px),repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(255,255,255,0.008) 3px,rgba(255,255,255,0.008) 6px)" }} />
+              <div style={{ position:"absolute", inset:12, border:"1px solid rgba(255,255,255,0.13)" }} />
+              <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", padding:28 }}>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:foilColor, lineHeight:1.2, marginBottom:8, transition:"color 0.4s" }}>{title || "The Originals"}</div>
+                <div style={{ width:28, height:1, background:foilColor+"55", margin:"0 auto 8px" }} />
+                <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:8, fontWeight:400, letterSpacing:"0.22em", textTransform:"uppercase", color:foilColor+"88" }}>Season {season || 1}</div>
+              </div>
+              <div style={{ position:"absolute", bottom:14, left:0, right:0, textAlign:"center", fontFamily:"'DM Sans',sans-serif", fontSize:7, letterSpacing:"0.3em", textTransform:"uppercase", color:"rgba(255,255,255,0.18)" }}>Chatbook</div>
+              <div style={{ position:"absolute", right:-5, top:3, width:6, height:314, backgroundImage:"repeating-linear-gradient(to bottom,#ece4d8 0px,#ece4d8 1px,#f4ece0 1px,#f4ece0 3px)", borderRadius:"0 2px 2px 0" }} />
+            </div>
+          </div>
         </div>
-      `).join('');
+      );
     }
 
-    // ─── PAY BUTTON ──────────────────────────────────────────────────────────
-    async function handlePay() {
-      clearErrors();
-      hideUploadError();
+    function ProgressBar({ step, total }) {
+      return (
+        <div style={{ padding:"16px 24px 0", maxWidth:720, margin:"0 auto" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+            <span style={{ fontSize:11, fontWeight:500, letterSpacing:"0.15em", textTransform:"uppercase", color:"#aaa" }}>Step {step} of {total}</span>
+            <span style={{ fontSize:11, color:"#ccc" }}>{Math.round((step/total)*100)}% complete</span>
+          </div>
+          <div style={{ height:3, background:"#f0f0f0", borderRadius:2 }}>
+            <div style={{ height:"100%", background:"#111", borderRadius:2, width:`${(step/total)*100}%`, transition:"width 0.4s ease" }} />
+          </div>
+        </div>
+      );
+    }
 
-      // Validate required fields
-      const required = ['shipName', 'shipAddr1', 'shipCity', 'shipState', 'shipZip', 'shipCountry'];
-      let ok = true;
-      required.forEach(id => {
-        if (!document.getElementById(id).value.trim()) {
-          showError(id, 'Required');
-          ok = false;
+    function Nav() {
+      return (
+        <nav style={{ background:"#fff", borderBottom:"1px solid #f0f0f0", padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
+          <a href="/index.html" style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:"#111", textDecoration:"none" }}>Chatbook</a>
+          <span style={{ fontSize:12, color:"#aaa", fontFamily:"'DM Sans',sans-serif" }}>Build your book</span>
+        </nav>
+      );
+    }
+
+    function Btn({ onClick, children, disabled, variant="primary", style:s={} }) {
+      const base = { padding:"13px 28px", fontSize:14, fontWeight:500, cursor:disabled?"not-allowed":"pointer", fontFamily:"'DM Sans',sans-serif", border:"none", transition:"opacity 0.15s", opacity:disabled?0.4:1, ...s };
+      const styles = variant==="primary" ? { ...base, background:"#111", color:"#fff" } : { ...base, background:"#fff", color:"#555", border:"1px solid #e0e0e0" };
+      return <button onClick={disabled?undefined:onClick} style={styles}>{children}</button>;
+    }
+
+    function NavBtns({ onBack, onNext, nextLabel="Next →", nextDisabled=false, loading=false }) {
+      return (
+        <div style={{ display:"flex", gap:12, marginTop:40, paddingTop:24, borderTop:"1px solid #f0f0f0" }}>
+          {onBack && <Btn variant="secondary" onClick={onBack}>← Back</Btn>}
+          <Btn onClick={onNext} disabled={nextDisabled||loading} style={{ marginLeft:"auto" }}>
+            {loading ? "Loading…" : nextLabel}
+          </Btn>
+        </div>
+      );
+    }
+
+    function FieldLabel({ children }) {
+      return <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.15em", textTransform:"uppercase", color:"#aaa", marginBottom:8 }}>{children}</div>;
+    }
+
+    function ErrorMsg({ msg }) {
+      if (!msg) return null;
+      return <div style={{ marginTop:8, fontSize:12, color:"#c00" }}>{msg}</div>;
+    }
+
+    // ══════════════════════════════════════════════
+    // SCREEN 1 — Platform + Upload
+    // ══════════════════════════════════════════════
+    function Screen1({ data, setData, onNext }) {
+      const [platform, setPlatform] = useState(data.platform || "whatsapp");
+      const [waitlistEmail, setWaitlistEmail] = useState(data.waitlistEmail || "");
+      const [parsing, setParsing] = useState(false);
+      const [dragOver, setDragOver] = useState(false);
+      const [error, setError] = useState("");
+      const fileRef = useRef();
+
+      async function parseZip(f) {
+        setParsing(true);
+        setError("");
+        try {
+          const zip = await JSZip.loadAsync(f);
+          let chatEntry = null;
+
+          // prefer _chat.txt
+          zip.forEach((path, entry) => {
+            if (!entry.dir && path.replace(/.*\//, "") === "_chat.txt" && !chatEntry) chatEntry = entry;
+          });
+          // fallback: any .txt
+          if (!chatEntry) {
+            zip.forEach((path, entry) => {
+              if (!entry.dir && path.endsWith(".txt") && !chatEntry) chatEntry = entry;
+            });
+          }
+          if (!chatEntry) throw new Error("No _chat.txt found in the zip. Please export your WhatsApp chat and try again.");
+
+          const text = await chatEntry.async("string");
+          const names = parseParticipants(text);   // BUG 1 FIX
+
+          if (names.length === 0) throw new Error("Could not find any participant names. Make sure the export includes message history.");
+
+          setData(d => ({ ...d, platform, file: f, participants: names, chatText: text }));
+        } catch(e) {
+          setError(e.message);
         }
-      });
-
-      const email = document.getElementById('customerEmail').value.trim();
-      if (!email || !email.includes('@')) {
-        showError('customerEmail', 'Please enter a valid email address.');
-        ok = false;
+        setParsing(false);
       }
 
-      if (!document.getElementById('consentCheck').checked) {
-        showUploadError('Please confirm your group is cool with this before continuing.');
-        ok = false;
+      function handleFile(f) {
+        if (!f) return;
+        if (!f.name.endsWith(".zip")) { setError("Please upload a .zip file."); return; }
+        if (f.size > 500 * 1024 * 1024) { setError("File must be under 500MB."); return; }
+        parseZip(f);
       }
 
-      if (!ok) return;
-
-      // Collect latest state
-      collectStep(4);
-      collectStep(5);
-
-      // Show loading, hide button
-      const payBtn = document.getElementById('payBtn');
-      const payLoading = document.getElementById('payLoading');
-      payBtn.style.display = 'none';
-      payLoading.classList.add('active');
-
-      // Build multipart form data
-      const fd = new FormData();
-      fd.append('file', state.file, state.file.name);
-      fd.append('group_name', state.groupName);
-      fd.append('season', state.season);
-      fd.append('your_name', state.yourName);
-      fd.append('nicknames', JSON.stringify(state.nicknames));
-      fd.append('cover_color', state.coverColor);
-      fd.append('foil_color', state.foilColor);
-      fd.append('dedication', state.dedication);
-      fd.append('closing_note', state.closingNote);
-      fd.append('format', state.format);
-      fd.append('customer_email', email);
-      if (state.dateMode === 'custom') {
-        fd.append('date_from', state.dateFrom);
-        fd.append('date_to', state.dateTo);
+      function handleDrop(e) {
+        e.preventDefault(); setDragOver(false);
+        handleFile(e.dataTransfer.files[0]);
       }
 
-      // Shipping
-      fd.append('ship_name', document.getElementById('shipName').value.trim());
-      fd.append('ship_addr1', document.getElementById('shipAddr1').value.trim());
-      fd.append('ship_addr2', document.getElementById('shipAddr2').value.trim());
-      fd.append('ship_city', document.getElementById('shipCity').value.trim());
-      fd.append('ship_state', document.getElementById('shipState').value.trim());
-      fd.append('ship_zip', document.getElementById('shipZip').value.trim());
-      fd.append('ship_country', document.getElementById('shipCountry').value.trim());
+      function advance() {
+        if (platform === "whatsapp" && !data.file) { setError("Please upload your WhatsApp export."); return; }
+        setData(d => ({ ...d, platform }));
+        onNext();
+      }
 
-      try {
-        const res = await fetch('https://aware-nature-production-7dda.up.railway.app/upload', {
-          method: 'POST',
-          body: fd,
-        });
+      return (
+        <div>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Platform</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Where is your chat?</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Choose the platform your group chat lives on.</p>
 
-        const data = await res.json();
+          <div style={{ display:"flex", gap:16, marginBottom:32, flexWrap:"wrap" }}>
+            <div onClick={() => { setPlatform("whatsapp"); setError(""); }}
+              style={{ flex:"1 1 220px", border:platform==="whatsapp"?"2px solid #111":"1px solid #e0e0e0", padding:24, cursor:"pointer", background:platform==="whatsapp"?"#fafafa":"#fff", transition:"all 0.15s" }}>
+              <div style={{ fontSize:28, marginBottom:12 }}>💬</div>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#111", marginBottom:6 }}>WhatsApp</div>
+              <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.6 }}>Export your chat from the app as a .zip file and upload it here.</div>
+              {platform==="whatsapp" && <div style={{ marginTop:12, fontSize:11, fontWeight:500, color:"#111", letterSpacing:"0.1em" }}>✓ SELECTED</div>}
+            </div>
 
-        if (!res.ok) {
-          throw new Error(data.error || 'Upload failed. Please try again.');
+            <div style={{ flex:"1 1 220px", border:"1px solid #e0e0e0", padding:24, background:"#fafafa", opacity:0.7 }}>
+              <div style={{ fontSize:28, marginBottom:12 }}>🍎</div>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#111", marginBottom:6 }}>iMessage</div>
+              <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.6, marginBottom:16 }}>Coming soon — join the waitlist to be first to know.</div>
+              <input type="email" placeholder="your@email.com" value={waitlistEmail}
+                onChange={e => { setWaitlistEmail(e.target.value); setData(d => ({ ...d, waitlistEmail: e.target.value })); }}
+                style={{ width:"100%", padding:"9px 12px", border:"1px solid #ddd", fontSize:13, fontFamily:"'DM Sans',sans-serif", background:"#fff", color:"#111" }} />
+              <button onClick={e => { e.stopPropagation(); alert("You're on the waitlist!"); }}
+                style={{ marginTop:8, width:"100%", padding:"9px 0", background:"#111", color:"#fff", border:"none", fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Notify me</button>
+            </div>
+          </div>
+
+          {platform === "whatsapp" && (
+            <div>
+              <div style={{ background:"#fafafa", border:"1px solid #f0f0f0", padding:"20px 24px", marginBottom:24 }}>
+                <div style={{ fontSize:12, fontWeight:500, color:"#111", marginBottom:12, letterSpacing:"0.05em" }}>How to export your WhatsApp chat</div>
+                {[
+                  "Open WhatsApp and go to the group chat.",
+                  "Tap the group name at the top to open group info.",
+                  "Scroll down and tap Export Chat.",
+                  "Choose Without Media to keep the file small.",
+                  "Save or share the .zip file, then upload it below.",
+                ].map((s,i) => (
+                  <div key={i} style={{ display:"flex", gap:12, marginBottom:8 }}>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:14, color:"#ddd", fontWeight:700, flexShrink:0, lineHeight:1.5 }}>{i+1}</div>
+                    <div style={{ fontSize:13, fontWeight:300, color:"#666", lineHeight:1.6 }}>{s}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileRef.current.click()}
+                style={{ border:dragOver?"2px solid #111":"2px dashed #ddd", padding:"40px 24px", textAlign:"center", cursor:"pointer", background:dragOver?"#fafafa":"#fff", transition:"all 0.15s", marginBottom:8 }}
+              >
+                <input ref={fileRef} type="file" accept=".zip" style={{ display:"none" }} onChange={e => handleFile(e.target.files[0])} />
+                {parsing ? (
+                  <div>
+                    <div style={{ width:24, height:24, border:"2px solid #111", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite", margin:"0 auto 12px" }} />
+                    <div style={{ fontSize:13, color:"#888" }}>Parsing your chat…</div>
+                  </div>
+                ) : data.file ? (
+                  <div>
+                    <div style={{ fontSize:24, marginBottom:8 }}>✓</div>
+                    <div style={{ fontSize:14, fontWeight:500, color:"#111", marginBottom:4 }}>{data.file.name}</div>
+                    <div style={{ fontSize:12, color:"#aaa" }}>
+                      {data.participants?.length > 0 ? `Found ${data.participants.length} participants` : "File uploaded"}{" · "}Click to replace
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize:32, marginBottom:8 }}>📁</div>
+                    <div style={{ fontSize:14, fontWeight:400, color:"#555", marginBottom:4 }}>Drop your .zip file here</div>
+                    <div style={{ fontSize:12, color:"#bbb" }}>or click to browse · max 500MB</div>
+                  </div>
+                )}
+              </div>
+              <ErrorMsg msg={error} />
+            </div>
+          )}
+
+          <NavBtns onNext={advance} nextLabel="Next →" loading={parsing} />
+        </div>
+      );
+    }
+
+    // ══════════════════════════════════════════════
+    // SCREEN 2 — Name your book
+    // ══════════════════════════════════════════════
+    function Screen2({ data, setData, onBack, onNext }) {
+      const [name, setName] = useState(data.bookName || "");
+      const [season, setSeason] = useState(data.season || 1);
+      const [dateMode, setDateMode] = useState(data.dateMode || "all");
+      const [dateFrom, setDateFrom] = useState(data.dateFrom || "");
+      const [dateTo, setDateTo] = useState(data.dateTo || "");
+      const [error, setError] = useState("");
+
+      useEffect(() => {
+        if (!name && data.file) {
+          const raw = data.file.name.replace(/\.zip$/i,"").replace(/[_-]/g," ").replace(/whatsapp chat with /i,"").trim();
+          setName(raw);
         }
+      }, []);
 
-        // Success — redirect to Stripe
-        window.location.href = 'https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00';
-
-      } catch (err) {
-        payLoading.classList.remove('active');
-        payBtn.style.display = '';
-        showUploadError(
-          err.message === 'Failed to fetch'
-            ? 'Could not reach our server. Please check your connection and try again.'
-            : err.message
-        );
+      function advance() {
+        if (!name.trim()) { setError("Please enter a name for your book."); return; }
+        setData(d => ({ ...d, bookName:name.trim(), season, dateMode, dateFrom, dateTo }));
+        onNext();
       }
+
+      return (
+        <div>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Name your book</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>What's this book called?</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>This will appear on the cover and spine of your book.</p>
+
+          <div style={{ marginBottom:24 }}>
+            <FieldLabel>Group chat name</FieldLabel>
+            <input type="text" value={name} placeholder="e.g. The House, Family Chat, The Besties"
+              onChange={e => { setName(e.target.value); setError(""); }}
+              style={inputStyle} />
+            <ErrorMsg msg={error} />
+          </div>
+
+          <div style={{ marginBottom:32 }}>
+            <FieldLabel>Season number</FieldLabel>
+            <div style={{ display:"flex", gap:8 }}>
+              {[1,2,3,4,5].map(n => (
+                <button key={n} onClick={() => setSeason(n)} style={{ width:44, height:44, border:season===n?"2px solid #111":"1px solid #e0e0e0", background:season===n?"#111":"#fff", color:season===n?"#fff":"#555", fontSize:14, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>{n}</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom:8 }}>
+            <FieldLabel>Date range</FieldLabel>
+            <div style={{ display:"flex", gap:0, marginBottom:16 }}>
+              {[["all","All messages"],["custom","Custom range"]].map(([val,label]) => (
+                <button key={val} onClick={() => setDateMode(val)} style={{ padding:"10px 20px", border:"1px solid #e0e0e0", background:dateMode===val?"#111":"#fff", color:dateMode===val?"#fff":"#555", fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginRight:-1 }}>{label}</button>
+              ))}
+            </div>
+            {dateMode === "custom" && (
+              <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+                <div style={{ flex:"1 1 160px" }}>
+                  <FieldLabel>From</FieldLabel>
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e0e0e0", fontSize:14, fontFamily:"'DM Sans',sans-serif" }} />
+                </div>
+                <div style={{ flex:"1 1 160px" }}>
+                  <FieldLabel>To</FieldLabel>
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e0e0e0", fontSize:14, fontFamily:"'DM Sans',sans-serif" }} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <NavBtns onBack={onBack} onNext={advance} />
+        </div>
+      );
     }
 
-    function showUploadError(msg) {
-      const el = document.getElementById('uploadError');
-      el.textContent = msg;
-      el.classList.add('active');
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // ══════════════════════════════════════════════
+    // SCREEN 3 — Cover
+    // ══════════════════════════════════════════════
+    function Screen3({ data, setData, onBack, onNext }) {
+      const initVibe = VIBES.find(v => v.id === data.vibeId) || VIBES[0];
+      const [vibe, setVibe] = useState({ ...initVibe, ...(data.customCover ? { id:"custom", label:"Custom", cover:data.customCover, spine:data.customSpine } : {}) });
+      const [foil, setFoil] = useState(FOILS.find(f => f.id === data.foilId) || FOILS[0]);
+
+      function pickVibe(v) {
+        setVibe(v);
+      }
+
+      function advance() {
+        setData(d => ({ ...d, vibeId:vibe.id, coverColor:vibe.cover, spineColor:vibe.spine, coverLabel:vibe.label, foilId:foil.id, foilColor:foil.color, foilLabel:foil.label,
+          ...(vibe.id==="custom" ? { customCover:vibe.cover, customSpine:vibe.spine } : { customCover:null }) }));
+        onNext();
+      }
+
+      return (
+        <div>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Cover design</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Choose your cover.</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Pick a color and foil finish. This is exactly what will be printed.</p>
+
+          <div style={{ marginBottom:40 }}>
+            <Book cover={vibe.cover} spine={vibe.spine} foilColor={foil.color} title={data.bookName} season={data.season} />
+          </div>
+
+          <div style={{ marginBottom:28 }}>
+            <FieldLabel>Cover color</FieldLabel>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>
+              {VIBES.map(v => (
+                <button key={v.id} onClick={() => pickVibe(v)} style={{
+                  background:v.cover, border:vibe.id===v.id?"2px solid #111":"2px solid transparent", borderRadius:2, padding:"7px 15px",
+                  color:(v.id==="white"||v.id==="tan")?"rgba(0,0,0,0.65)":"rgba(255,255,255,0.9)",
+                  fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                  opacity:vibe.id===v.id?1:0.65, boxShadow:vibe.id===v.id?"0 2px 10px rgba(0,0,0,0.2)":"none", transition:"all 0.15s",
+                }}>{v.label}</button>
+              ))}
+              <label style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 15px", border:vibe.id==="custom"?"2px solid #111":"2px dashed #ddd", borderRadius:2, fontSize:12, fontWeight:500, color:vibe.id==="custom"?"rgba(255,255,255,0.9)":"#aaa", cursor:"pointer", fontFamily:"'DM Sans',sans-serif", background:vibe.id==="custom"?vibe.cover:"#fff", position:"relative" }}>
+                <input type="color" defaultValue={data.customCover||"#8B4513"} style={{ width:0, height:0, opacity:0, position:"absolute" }}
+                  onChange={e => {
+                    const hex = e.target.value;
+                    const r = Math.max(0,parseInt(hex.slice(1,3),16)-40), g = Math.max(0,parseInt(hex.slice(3,5),16)-40), b = Math.max(0,parseInt(hex.slice(5,7),16)-40);
+                    const light = (parseInt(hex.slice(1,3),16)+parseInt(hex.slice(3,5),16)+parseInt(hex.slice(5,7),16))/3;
+                    setVibe({ id:"custom", label:"Custom", cover:hex, spine:`rgb(${r},${g},${b})`, gold:light>160?"#7a5c2e":"#C9A84C" });
+                  }} />
+                + Custom
+              </label>
+            </div>
+          </div>
+
+          <div style={{ marginBottom:8 }}>
+            <FieldLabel>Foil color</FieldLabel>
+            <div style={{ display:"flex", gap:8 }}>
+              {FOILS.map(f => (
+                <button key={f.id} onClick={() => setFoil(f)} style={{ padding:"8px 20px", border:foil.id===f.id?"2px solid #111":"1px solid #e0e0e0", background:f.color, color:f.id==="gold"?"#5a3e00":f.id==="white"?"#888":"#333", fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", boxShadow:foil.id===f.id?"0 2px 8px rgba(0,0,0,0.15)":"none", transition:"all 0.15s" }}>{f.label}</button>
+              ))}
+            </div>
+          </div>
+
+          <NavBtns onBack={onBack} onNext={advance} />
+        </div>
+      );
     }
 
-    function hideUploadError() {
-      const el = document.getElementById('uploadError');
-      el.classList.remove('active');
-      el.textContent = '';
+    // ══════════════════════════════════════════════
+    // SCREEN 4 — Nicknames
+    // ══════════════════════════════════════════════
+    function Screen4({ data, setData, onBack, onNext }) {
+      const participants = data.participants || ["Alex Johnson","Sam Rivera","Jordan Lee","Casey Kim"];
+      const [nicknames, setNicknames] = useState(() => data.nicknames || Object.fromEntries(participants.map(p => [p, p])));
+      const [myName, setMyName] = useState(data.myName || participants[0] || "");
+      const [error, setError] = useState("");
+
+      function advance() {
+        if (!myName) { setError("Please select your name."); return; }
+        setData(d => ({ ...d, nicknames, myName }));
+        onNext();
+      }
+
+      return (
+        <div>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Nicknames</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Who's in this book?</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Give everyone a nickname — or keep their real names. Your call.</p>
+
+          <div style={{ marginBottom:28 }}>
+            <FieldLabel>Your name in this chat</FieldLabel>
+            <select value={myName} onChange={e => { setMyName(e.target.value); setError(""); }}
+              style={{ width:"100%", padding:"11px 14px", border:"1px solid #e0e0e0", fontSize:14, fontWeight:300, color:"#111", fontFamily:"'DM Sans',sans-serif", background:"#fff" }}>
+              <option value="">Select your name…</option>
+              {participants.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <ErrorMsg msg={error} />
+          </div>
+
+          <div style={{ marginBottom:8 }}>
+            <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+              <div style={{ flex:1, fontSize:10, fontWeight:500, letterSpacing:"0.15em", textTransform:"uppercase", color:"#aaa" }}>Original name</div>
+              <div style={{ width:20 }} />
+              <div style={{ flex:1, fontSize:10, fontWeight:500, letterSpacing:"0.15em", textTransform:"uppercase", color:"#aaa" }}>Nickname in book</div>
+            </div>
+            {participants.map(p => (
+              <div key={p} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"center" }}>
+                <div style={{ flex:1, padding:"11px 14px", background:"#fafafa", border:"1px solid #f0f0f0", fontSize:13, fontWeight:300, color:"#888" }}>{p}</div>
+                <div style={{ fontSize:16, color:"#ddd", flexShrink:0 }}>→</div>
+                {/* BUG 2 FIX: use uncontrolled input with defaultValue + onBlur to avoid cursor-drop on controlled re-render */}
+                <input
+                  type="text"
+                  defaultValue={nicknames[p] || p}
+                  placeholder={p}
+                  onBlur={e => setNicknames(n => ({ ...n, [p]: e.target.value }))}
+                  onChange={e => setNicknames(n => ({ ...n, [p]: e.target.value }))}
+                  style={{ ...inputStyle, flex:1 }}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop:16, padding:"14px 16px", background:"#fafafa", border:"1px solid #f0f0f0" }}>
+            <div style={{ fontSize:12, fontWeight:300, color:"#aaa", lineHeight:1.6 }}>
+              Nicknames appear as sender labels only — mentions within messages appear as written.
+            </div>
+          </div>
+
+          <NavBtns onBack={onBack} onNext={advance} />
+        </div>
+      );
     }
 
-    // ─── INIT ────────────────────────────────────────────────────────────────
-    updateProgress(1);
+    // ══════════════════════════════════════════════
+    // SCREEN 5 — Chapters + Customization
+    // Added: dedication and closing note fields
+    // ══════════════════════════════════════════════
+    function Screen5({ data, setData, onBack, onNext }) {
+      const [chapters, setChapters] = useState(data.chapters || [
+        { title:"The Beginning", dateRange:"Jan 2021 – Jun 2021" },
+        { title:"Middle Chapter", dateRange:"Jul 2021 – Dec 2021" },
+        { title:"The Latest Season", dateRange:"Jan 2022 – Present" },
+      ]);
+      const [dedication, setDedication] = useState(data.dedication || "");
+      const [closingNote, setClosingNote] = useState(data.closingNote || "");
+
+      function setChapterField(i, field, val) {
+        setChapters(chs => chs.map((c,idx) => idx===i ? { ...c, [field]:val } : c));
+      }
+
+      function advance() {
+        setData(d => ({ ...d, chapters, dedication, closingNote }));
+        onNext();
+      }
+
+      return (
+        <div>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Chapters</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>How does the story break down?</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:8, lineHeight:1.7 }}>We auto-suggested chapter breaks based on gaps in your chat. Rename them however you like.</p>
+          <div style={{ marginBottom:28, padding:"12px 16px", background:"#fffbe6", border:"1px solid #f0e0a0" }}>
+            <div style={{ fontSize:12, fontWeight:300, color:"#888", lineHeight:1.6 }}>We'll refine these when we process your book. These are starting suggestions.</div>
+          </div>
+
+          <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:16 }}>
+            {chapters.map((ch, i) => (
+              <div key={i} style={{ border:"1px solid #e0e0e0", padding:"20px 20px 16px", background:"#fafafa" }}>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:"#e8e8e8", fontWeight:700, lineHeight:1, marginBottom:12 }}>{i+1}</div>
+                <div style={{ marginBottom:12 }}>
+                  <FieldLabel>Chapter title</FieldLabel>
+                  <input type="text" value={ch.title} placeholder={`Chapter ${i+1}`}
+                    onChange={e => setChapterField(i,"title",e.target.value)}
+                    style={inputStyle} />
+                </div>
+                <div>
+                  <FieldLabel>Date range (approximate)</FieldLabel>
+                  <input type="text" value={ch.dateRange} placeholder="e.g. Jan 2021 – Jun 2021"
+                    onChange={e => setChapterField(i,"dateRange",e.target.value)}
+                    style={inputStyle} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={() => setChapters(chs => [...chs, { title:`Chapter ${chs.length+1}`, dateRange:"" }])}
+            style={{ background:"none", border:"1px dashed #ddd", padding:"10px 20px", fontSize:13, color:"#aaa", cursor:"pointer", fontFamily:"'DM Sans',sans-serif", width:"100%", marginBottom:32 }}>
+            + Add chapter
+          </button>
+
+          {/* Dedication */}
+          <div style={{ marginBottom:24, paddingTop:24, borderTop:"1px solid #f0f0f0" }}>
+            <FieldLabel>Dedication <span style={{ textTransform:"none", color:"#ccc", fontWeight:300, letterSpacing:0 }}>(optional)</span></FieldLabel>
+            <p style={{ fontSize:12, fontWeight:300, color:"#aaa", marginBottom:10, lineHeight:1.6 }}>Appears on the dedication page at the front of the book. Max 200 characters.</p>
+            <textarea
+              value={dedication}
+              onChange={e => setDedication(e.target.value.slice(0,200))}
+              placeholder="e.g. For everyone who never learned to read the room. You know who you are."
+              rows={3}
+              style={{ width:"100%", padding:"11px 14px", border:"1px solid #e0e0e0", fontSize:14, fontWeight:300, color:"#111", fontFamily:"'DM Sans',sans-serif", resize:"vertical", outline:"none", lineHeight:1.6 }}
+            />
+            <div style={{ fontSize:11, color:"#ccc", textAlign:"right", marginTop:4 }}>{dedication.length}/200</div>
+          </div>
+
+          {/* Closing note */}
+          <div style={{ marginBottom:8 }}>
+            <FieldLabel>Closing note <span style={{ textTransform:"none", color:"#ccc", fontWeight:300, letterSpacing:0 }}>(optional)</span></FieldLabel>
+            <p style={{ fontSize:12, fontWeight:300, color:"#aaa", marginBottom:10, lineHeight:1.6 }}>Appears on the final page. A note from you to everyone in the book. Max 400 characters.</p>
+            <textarea
+              value={closingNote}
+              onChange={e => setClosingNote(e.target.value.slice(0,400))}
+              placeholder="e.g. Thanks for being the kind of people worth printing. Season 2 pending."
+              rows={4}
+              style={{ width:"100%", padding:"11px 14px", border:"1px solid #e0e0e0", fontSize:14, fontWeight:300, color:"#111", fontFamily:"'DM Sans',sans-serif", resize:"vertical", outline:"none", lineHeight:1.6 }}
+            />
+            <div style={{ fontSize:11, color:"#ccc", textAlign:"right", marginTop:4 }}>{closingNote.length}/400</div>
+          </div>
+
+          <NavBtns onBack={onBack} onNext={advance} />
+        </div>
+      );
+    }
+
+    // ══════════════════════════════════════════════
+    // SCREEN 6 — Preview
+    // ══════════════════════════════════════════════
+    function Screen6({ data, setData, onBack, onNext }) {
+      const [email, setEmail] = useState(data.proofEmail || "");
+      const [error, setError] = useState("");
+      const vibe = VIBES.find(v => v.id === data.vibeId) || VIBES[0];
+      const foil = FOILS.find(f => f.id === data.foilId) || FOILS[0];
+      const cover = data.coverColor || vibe.cover;
+      const spine = data.spineColor || vibe.spine;
+      const foilColor = data.foilColor || foil.color;
+
+      function advance() {
+        if (!email.trim() || !email.includes("@")) { setError("Please enter a valid email for proof delivery."); return; }
+        setData(d => ({ ...d, proofEmail:email.trim() }));
+        onNext();
+      }
+
+      return (
+        <div>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Preview</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Here's your cover.</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>We'll send a full PDF proof before anything goes to print.</p>
+
+          <div style={{ marginBottom:40 }}>
+            <Book cover={cover} spine={spine} foilColor={foilColor} title={data.bookName} season={data.season} />
+          </div>
+
+          <div style={{ padding:"20px 24px", background:"#fafafa", border:"1px solid #f0f0f0", marginBottom:28 }}>
+            <div style={{ fontSize:14, fontWeight:500, color:"#111", marginBottom:8 }}>What happens next</div>
+            <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.7 }}>Your proof will be ready within 48 hours. We'll email it to you before anything goes to print. You'll have a chance to review and request changes.</div>
+          </div>
+
+          <div style={{ marginBottom:8 }}>
+            <FieldLabel>Email for proof delivery</FieldLabel>
+            <input type="text" value={email} placeholder="your@email.com"
+              onChange={e => { setEmail(e.target.value); setError(""); }}
+              style={inputStyle} />
+            <ErrorMsg msg={error} />
+          </div>
+
+          <NavBtns onBack={onBack} onNext={advance} nextLabel="Continue to checkout →" />
+        </div>
+      );
+    }
+
+    // ══════════════════════════════════════════════
+    // SCREEN 7 — Checkout
+    // BUG 2 FIX: AddrForm moved to module level (above)
+    // BUG 3 FIX: sends individual named fields matching backend expectations
+    // ══════════════════════════════════════════════
+    function Screen7({ data, onBack }) {
+      const [qty, setQty] = useState(data.qty || 1);
+      const [shipMode, setShipMode] = useState(data.shipMode || "single");
+      const [singleAddr, setSingleAddr] = useState(data.singleAddr || { name:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" });
+      const [multiAddrs, setMultiAddrs] = useState(data.multiAddrs || [{ name:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" }]);
+      const [consent, setConsent] = useState(false);
+      const [submitting, setSubmitting] = useState(false);
+      const [error, setError] = useState("");
+
+      const vibe = VIBES.find(v => v.id === data.vibeId) || VIBES[0];
+      const foil = FOILS.find(f => f.id === data.foilId) || FOILS[0];
+      const price = 89;
+      const total = price * qty;
+
+      function addAddr() {
+        if (multiAddrs.length < 10) setMultiAddrs(a => [...a, { name:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" }]);
+      }
+      function removeAddr(i) { setMultiAddrs(a => a.filter((_,idx) => idx!==i)); }
+
+      async function handleSubmit() {
+        if (!consent) { setError("Please agree to the terms to continue."); return; }
+        const primaryAddr = shipMode === "single" ? singleAddr : multiAddrs[0];
+        if (!primaryAddr.name || !primaryAddr.line1 || !primaryAddr.city || !primaryAddr.state || !primaryAddr.zip) {
+          setError("Please complete the shipping address."); return;
+        }
+        setSubmitting(true);
+        setError("");
+
+        try {
+          const fd = new FormData();
+
+          // attach the zip file
+          if (data.file) fd.append("file", data.file);
+
+          // BUG 3 FIX: individual named fields the dashboard reads
+          fd.append("group_name",       data.bookName || "");
+          fd.append("customer_name",    primaryAddr.name);
+          fd.append("customer_email",   data.proofEmail || "");
+          fd.append("platform",         data.platform || "whatsapp");
+          fd.append("season",           String(data.season || 1));
+          fd.append("cover_color",      data.coverLabel || vibe.label);
+          fd.append("cover_hex",        data.coverColor || vibe.cover);
+          fd.append("foil_color",       data.foilLabel || foil.label);
+          fd.append("quantity",         String(qty));
+          fd.append("total",            String(total));
+          fd.append("shipping_mode",    shipMode);
+          fd.append("shipping_name",    primaryAddr.name);
+          fd.append("shipping_line1",   primaryAddr.line1);
+          fd.append("shipping_line2",   primaryAddr.line2 || "");
+          fd.append("shipping_city",    primaryAddr.city);
+          fd.append("shipping_state",   primaryAddr.state);
+          fd.append("shipping_zip",     primaryAddr.zip);
+          fd.append("shipping_country", primaryAddr.country || "US");
+          fd.append("my_name",          data.myName || "");
+          fd.append("dedication",       data.dedication || "");
+          fd.append("closing_note",     data.closingNote || "");
+          fd.append("nicknames",        JSON.stringify(data.nicknames || {}));
+          fd.append("chapters",         JSON.stringify(data.chapters || []));
+
+          // also send full order JSON for backward compat / dashboard detail view
+          fd.append("order", JSON.stringify({
+            group_name: data.bookName, customer_name: primaryAddr.name,
+            customer_email: data.proofEmail, platform: data.platform,
+            season: data.season, cover_color: data.coverLabel || vibe.label,
+            cover_hex: data.coverColor || vibe.cover, foil_color: data.foilLabel || foil.label,
+            quantity: qty, total, shipping_mode: shipMode,
+            shipping_address: primaryAddr, multi_addresses: shipMode==="multiple" ? multiAddrs : null,
+            my_name: data.myName, dedication: data.dedication, closing_note: data.closingNote,
+            nicknames: data.nicknames, chapters: data.chapters, proof_email: data.proofEmail,
+            date_mode: data.dateMode, date_from: data.dateFrom, date_to: data.dateTo,
+          }));
+
+          if (shipMode === "multiple") {
+            fd.append("multi_addresses", JSON.stringify(multiAddrs));
+          }
+
+          const res = await fetch("https://aware-nature-production-7dda.up.railway.app/upload", {
+            method: "POST",
+            body: fd,
+          });
+
+          if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
+          window.location.href = "https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00";
+        } catch(e) {
+          setError("Something went wrong: " + e.message + ". Please try again or email hello@ourchatbook.com.");
+          setSubmitting(false);
+        }
+      }
+
+      return (
+        <div>
+          <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Checkout</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Almost done.</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Review your order and enter shipping details.</p>
+
+          <div style={{ border:"1px solid #f0f0f0", marginBottom:28 }}>
+            <div style={{ padding:"16px 20px", borderBottom:"1px solid #f0f0f0", background:"#fafafa" }}>
+              <div style={{ fontSize:12, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase", color:"#aaa" }}>Order summary</div>
+            </div>
+            {[
+              ["Book name",   data.bookName || "—"],
+              ["Season",      `Season ${data.season || 1}`],
+              ["Cover",       `${data.coverLabel || vibe.label} · ${data.foilLabel || foil.label} foil`],
+              ["Format",      "8.5×11 hardcover, linen wrap"],
+              ["Proof email", data.proofEmail || "—"],
+              ...(data.dedication ? [["Dedication", data.dedication.slice(0,60)+(data.dedication.length>60?"…":"")]] : []),
+            ].map(([k,v]) => (
+              <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"12px 20px", borderBottom:"1px solid #f0f0f0" }}>
+                <span style={{ fontSize:13, fontWeight:300, color:"#888" }}>{k}</span>
+                <span style={{ fontSize:13, fontWeight:400, color:"#111", maxWidth:"55%", textAlign:"right" }}>{v}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginBottom:24 }}>
+            <FieldLabel>Quantity</FieldLabel>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:36, height:36, border:"1px solid #e0e0e0", background:"#fff", fontSize:18, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>−</button>
+              <span style={{ width:40, textAlign:"center", fontSize:16, fontWeight:500 }}>{qty}</span>
+              <button onClick={() => setQty(q => Math.min(10,q+1))} style={{ width:36, height:36, border:"1px solid #e0e0e0", background:"#fff", fontSize:18, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>+</button>
+              <span style={{ fontSize:13, color:"#aaa", marginLeft:8 }}>max 10</span>
+            </div>
+          </div>
+
+          <div style={{ marginBottom:20 }}>
+            <FieldLabel>Shipping</FieldLabel>
+            <div style={{ display:"flex", gap:0, marginBottom:16 }}>
+              {[["single","Single address"],["multiple","Multiple addresses"]].map(([val,label]) => (
+                <button key={val} onClick={() => setShipMode(val)} style={{ padding:"10px 18px", border:"1px solid #e0e0e0", background:shipMode===val?"#111":"#fff", color:shipMode===val?"#fff":"#555", fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginRight:-1 }}>{label}</button>
+              ))}
+            </div>
+
+            {shipMode === "single" && (
+              <AddrForm addr={singleAddr} onChange={(field,val) => setSingleAddr(a => ({ ...a, [field]:val }))} />
+            )}
+
+            {shipMode === "multiple" && (
+              <div>
+                <div style={{ fontSize:12, color:"#aaa", marginBottom:12 }}>Add up to 10 shipping addresses — one book per address.</div>
+                {multiAddrs.map((a, i) => (
+                  <div key={i}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                      <div style={{ fontSize:12, fontWeight:500, color:"#aaa", letterSpacing:"0.08em" }}>Address {i+1}</div>
+                      {i > 0 && <button onClick={() => removeAddr(i)} style={{ background:"none", border:"none", fontSize:12, color:"#ccc", cursor:"pointer" }}>Remove</button>}
+                    </div>
+                    <AddrForm addr={a} onChange={(field,val) => setMultiAddrs(addrs => addrs.map((x,idx) => idx===i ? { ...x, [field]:val } : x))} />
+                  </div>
+                ))}
+                {multiAddrs.length < 10 && (
+                  <button onClick={addAddr} style={{ width:"100%", padding:"10px", border:"1px dashed #ddd", background:"none", fontSize:13, color:"#aaa", cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginBottom:8 }}>+ Add another address</button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div style={{ padding:"16px 20px", background:"#fafafa", border:"1px solid #f0f0f0", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div>
+              <div style={{ fontSize:13, fontWeight:300, color:"#888" }}>{qty} × $89</div>
+              <div style={{ fontSize:11, fontWeight:300, color:"#bbb", marginTop:2 }}>+ shipping calculated at checkout</div>
+            </div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:"#111" }}>${total}</div>
+          </div>
+
+          <label style={{ display:"flex", gap:12, alignItems:"flex-start", cursor:"pointer", marginBottom:24, padding:"16px", border:consent?"1px solid #111":"1px solid #e0e0e0", background:consent?"#fafafa":"#fff" }}>
+            <input type="checkbox" checked={consent} onChange={e => { setConsent(e.target.checked); setError(""); }}
+              style={{ marginTop:2, flexShrink:0, width:16, height:16, cursor:"pointer" }} />
+            <div style={{ fontSize:13, fontWeight:300, color:"#555", lineHeight:1.6 }}>
+              I've got consent from everyone in this chat to be included in a printed book.{" "}
+              <span style={{ color:"#aaa" }}>Don't buy this if your friends aren't cool with it.</span>
+            </div>
+          </label>
+
+          <ErrorMsg msg={error} />
+
+          <div style={{ paddingTop:16, borderTop:"1px solid #f0f0f0", marginTop:8 }}>
+            <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+              <Btn variant="secondary" onClick={onBack}>← Back</Btn>
+              <button onClick={handleSubmit} disabled={submitting} style={{ flex:1, padding:"15px 0", background:submitting?"#555":"#111", color:"#fff", border:"none", fontSize:15, fontWeight:500, cursor:submitting?"not-allowed":"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background 0.15s" }}>
+                {submitting ? (
+                  <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+                    <span style={{ display:"inline-block", width:16, height:16, border:"2px solid #fff", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
+                    Uploading…
+                  </span>
+                ) : `Pay Now · $${total}`}
+              </button>
+            </div>
+            <div style={{ marginTop:12, fontSize:11, fontWeight:300, color:"#bbb", textAlign:"center", lineHeight:1.6 }}>
+              Secure payment via Stripe · Your chat data is deleted after processing
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ══════════════════════════════════════════════
+    // ROOT
+    // ══════════════════════════════════════════════
+    function Builder() {
+      const [step, setStep] = useState(1);
+      const [data, setData] = useState({});
+      const TOTAL = 7;
+
+      const next = () => { setStep(s => Math.min(s+1,TOTAL)); window.scrollTo(0,0); };
+      const back = () => { setStep(s => Math.max(s-1,1)); window.scrollTo(0,0); };
+
+      const screens = [
+        <Screen1 data={data} setData={setData} onNext={next} />,
+        <Screen2 data={data} setData={setData} onBack={back} onNext={next} />,
+        <Screen3 data={data} setData={setData} onBack={back} onNext={next} />,
+        <Screen4 data={data} setData={setData} onBack={back} onNext={next} />,
+        <Screen5 data={data} setData={setData} onBack={back} onNext={next} />,
+        <Screen6 data={data} setData={setData} onBack={back} onNext={next} />,
+        <Screen7 data={data} setData={setData} onBack={back} />,
+      ];
+
+      return (
+        <div style={{ background:"#fff", minHeight:"100vh", fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:"#111" }}>
+          <Nav />
+          <ProgressBar step={step} total={TOTAL} />
+          <div style={{ maxWidth:600, margin:"0 auto", padding:"40px 24px 80px" }}>
+            {screens[step-1]}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Builder />);
   </script>
-
 </body>
 </html>
