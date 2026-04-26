@@ -233,15 +233,60 @@
     }
 
     // ══════════════════════════════════════════════
-    // SCREEN 1 — Platform + Upload
+    // SCREEN 1 — Platform grid + Upload / Waitlist
+    // WhatsApp: selected by default, shows upload flow
+    // Coming soon: shows waitlist panel
+    // Other: shows "what platform?" + email
     // ══════════════════════════════════════════════
+    const ALL_PLATFORMS = [
+      { id:"whatsapp",  label:"WhatsApp",      emoji:"💬", status:"ready" },
+      { id:"imessage",  label:"iMessage",      emoji:"🍎", status:"soon"  },
+      { id:"telegram",  label:"Telegram",      emoji:"✈️", status:"soon"  },
+      { id:"discord",   label:"Discord",       emoji:"🎮", status:"soon"  },
+      { id:"signal",    label:"Signal",        emoji:"🔒", status:"soon"  },
+      { id:"other",     label:"Other",         emoji:"💬", status:"soon"  },
+    ];
+
     function Screen1({ data, setData, onNext }) {
-      const [platform, setPlatform] = useState(data.platform || "whatsapp");
-      const [waitlistEmail, setWaitlistEmail] = useState(data.waitlistEmail || "");
+      const [selectedPlatform, setSelectedPlatform] = useState("whatsapp");
       const [parsing, setParsing] = useState(false);
       const [dragOver, setDragOver] = useState(false);
       const [error, setError] = useState("");
       const fileRef = useRef();
+
+      // Waitlist state
+      const [waitlistChecked, setWaitlistChecked] = useState({});
+      const [waitlistEmail, setWaitlistEmail] = useState("");
+      const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+      const [otherPlatformText, setOtherPlatformText] = useState("");
+
+      function selectPlatform(id) {
+        setSelectedPlatform(id);
+        setError("");
+        setWaitlistSubmitted(false);
+        setWaitlistEmail("");
+        setOtherPlatformText("");
+        // pre-check the clicked platform in the multi-select
+        if (id !== "whatsapp") {
+          setWaitlistChecked(prev => ({ ...prev, [id]: true }));
+        }
+      }
+
+      function toggleWaitlistPlatform(id) {
+        setWaitlistChecked(prev => ({ ...prev, [id]: !prev[id] }));
+      }
+
+      function submitWaitlist() {
+        if (!waitlistEmail.trim() || !waitlistEmail.includes("@")) return;
+        const nonWhatsapp = ALL_PLATFORMS.filter(p => p.status === "soon");
+        const selected = nonWhatsapp.filter(p => waitlistChecked[p.id] && p.id !== "other").map(p => p.label);
+        const payload = { email: waitlistEmail.trim(), platforms: selected };
+        if (waitlistChecked["other"] && otherPlatformText.trim()) {
+          payload.otherPlatform = otherPlatformText.trim();
+        }
+        console.log("Waitlist signup:", payload);
+        setWaitlistSubmitted(true);
+      }
 
       async function parseZip(f) {
         setParsing(true);
@@ -249,25 +294,19 @@
         try {
           const zip = await JSZip.loadAsync(f);
           let chatEntry = null;
-
-          // prefer _chat.txt
           zip.forEach((path, entry) => {
             if (!entry.dir && path.replace(/.*\//, "") === "_chat.txt" && !chatEntry) chatEntry = entry;
           });
-          // fallback: any .txt
           if (!chatEntry) {
             zip.forEach((path, entry) => {
               if (!entry.dir && path.endsWith(".txt") && !chatEntry) chatEntry = entry;
             });
           }
           if (!chatEntry) throw new Error("No _chat.txt found in the zip. Please export your WhatsApp chat and try again.");
-
           const text = await chatEntry.async("string");
-          const names = parseParticipants(text);   // BUG 1 FIX
-
+          const names = parseParticipants(text);
           if (names.length === 0) throw new Error("Could not find any participant names. Make sure the export includes message history.");
-
-          setData(d => ({ ...d, platform, file: f, participants: names, chatText: text }));
+          setData(d => ({ ...d, platform:"whatsapp", file: f, participants: names, chatText: text }));
         } catch(e) {
           setError(e.message);
         }
@@ -276,8 +315,8 @@
 
       function handleFile(f) {
         if (!f) return;
-        if (!f.name.endsWith(".zip")) { setError("Please upload a .zip file."); return; }
         if (f.size > 500 * 1024 * 1024) { setError("File must be under 500MB."); return; }
+        if (!f.name.endsWith(".zip")) { setError("Please upload a .zip file."); return; }
         parseZip(f);
       }
 
@@ -287,42 +326,59 @@
       }
 
       function advance() {
-        if (platform === "whatsapp" && !data.file) { setError("Please upload your WhatsApp export."); return; }
-        setData(d => ({ ...d, platform }));
-        onNext();
+        if (selectedPlatform === "whatsapp") {
+          if (!data.file) { setError("Please upload your WhatsApp export to continue."); return; }
+          setData(d => ({ ...d, platform:"whatsapp" }));
+          onNext();
+        }
+        // For waitlist flows, Next button is replaced by the submit+thank-you state
       }
+
+      const clickedLabel = ALL_PLATFORMS.find(p => p.id === selectedPlatform)?.label || "";
 
       return (
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Platform</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Where is your chat?</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Choose the platform your group chat lives on.</p>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Where does your group live?</h2>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>We support WhatsApp now — more platforms coming soon.</p>
 
-          <div style={{ display:"flex", gap:16, marginBottom:32, flexWrap:"wrap" }}>
-            <div onClick={() => { setPlatform("whatsapp"); setError(""); }}
-              style={{ flex:"1 1 220px", border:platform==="whatsapp"?"2px solid #111":"1px solid #e0e0e0", padding:24, cursor:"pointer", background:platform==="whatsapp"?"#fafafa":"#fff", transition:"all 0.15s" }}>
-              <div style={{ fontSize:28, marginBottom:12 }}>💬</div>
-              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#111", marginBottom:6 }}>WhatsApp</div>
-              <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.6 }}>Export your chat from the app as a .zip file and upload it here.</div>
-              {platform==="whatsapp" && <div style={{ marginTop:12, fontSize:11, fontWeight:500, color:"#111", letterSpacing:"0.1em" }}>✓ SELECTED</div>}
-            </div>
-
-            <div style={{ flex:"1 1 220px", border:"1px solid #e0e0e0", padding:24, background:"#fafafa", opacity:0.7 }}>
-              <div style={{ fontSize:28, marginBottom:12 }}>🍎</div>
-              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#111", marginBottom:6 }}>iMessage</div>
-              <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.6, marginBottom:16 }}>Coming soon — join the waitlist to be first to know.</div>
-              <input type="email" placeholder="your@email.com" value={waitlistEmail}
-                onChange={e => { setWaitlistEmail(e.target.value); setData(d => ({ ...d, waitlistEmail: e.target.value })); }}
-                style={{ width:"100%", padding:"9px 12px", border:"1px solid #ddd", fontSize:13, fontFamily:"'DM Sans',sans-serif", background:"#fff", color:"#111" }} />
-              <button onClick={e => { e.stopPropagation(); alert("You're on the waitlist!"); }}
-                style={{ marginTop:8, width:"100%", padding:"9px 0", background:"#111", color:"#fff", border:"none", fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Notify me</button>
-            </div>
+          {/* 2×3 platform grid */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:32 }}>
+            {ALL_PLATFORMS.map(p => {
+              const isSelected = selectedPlatform === p.id;
+              const isReady = p.status === "ready";
+              return (
+                <button key={p.id} onClick={() => selectPlatform(p.id)} style={{
+                  display:"flex", flexDirection:"column", alignItems:"flex-start",
+                  padding:"16px 18px", gap:6,
+                  border: isSelected ? "2px solid #111" : "1px solid #e0e0e0",
+                  background: isSelected ? "#fafafa" : "#fff",
+                  cursor:"pointer", textAlign:"left", transition:"all 0.15s",
+                  fontFamily:"'DM Sans',sans-serif",
+                }}>
+                  <div style={{ fontSize:22 }}>{p.emoji}</div>
+                  <div style={{ fontSize:14, fontWeight:500, color:"#111" }}>{p.label}</div>
+                  <div style={{
+                    fontSize:10, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase",
+                    background: isReady ? "#111" : "#f0f0f0",
+                    color: isReady ? "#fff" : "#aaa",
+                    padding:"2px 7px",
+                  }}>
+                    {isReady ? "Ready now" : p.id === "other" ? "Tell us" : "Coming soon"}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          {platform === "whatsapp" && (
+          {/* Panel below grid — changes based on selected platform */}
+
+          {/* WhatsApp panel */}
+          {selectedPlatform === "whatsapp" && (
             <div>
-              <div style={{ background:"#fafafa", border:"1px solid #f0f0f0", padding:"20px 24px", marginBottom:24 }}>
-                <div style={{ fontSize:12, fontWeight:500, color:"#111", marginBottom:12, letterSpacing:"0.05em" }}>How to export your WhatsApp chat</div>
+              {/* How-to instructions */}
+              <div style={{ background:"#fafafa", border:"1px solid #f0f0f0", padding:"16px 20px", marginBottom:20 }}>
+                <div style={{ fontSize:11, fontWeight:500, color:"#aaa", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:10 }}>How to export</div>
                 {[
                   "Open WhatsApp and go to the group chat.",
                   "Tap the group name at the top to open group info.",
@@ -330,47 +386,111 @@
                   "Choose Without Media to keep the file small.",
                   "Save or share the .zip file, then upload it below.",
                 ].map((s,i) => (
-                  <div key={i} style={{ display:"flex", gap:12, marginBottom:8 }}>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:14, color:"#ddd", fontWeight:700, flexShrink:0, lineHeight:1.5 }}>{i+1}</div>
+                  <div key={i} style={{ display:"flex", gap:10, marginBottom:6 }}>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:13, color:"#ddd", fontWeight:700, flexShrink:0, lineHeight:1.6 }}>{i+1}</div>
                     <div style={{ fontSize:13, fontWeight:300, color:"#666", lineHeight:1.6 }}>{s}</div>
                   </div>
                 ))}
               </div>
 
+              {/* Drop zone */}
               <div
                 onDragOver={e => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
                 onClick={() => fileRef.current.click()}
-                style={{ border:dragOver?"2px solid #111":"2px dashed #ddd", padding:"40px 24px", textAlign:"center", cursor:"pointer", background:dragOver?"#fafafa":"#fff", transition:"all 0.15s", marginBottom:8 }}
+                style={{ border:dragOver?"2px solid #111":"2px dashed #ddd", padding:"32px 24px", textAlign:"center", cursor:"pointer", background:dragOver?"#f5f5f5":"#fff", transition:"all 0.15s", marginBottom:8 }}
               >
                 <input ref={fileRef} type="file" accept=".zip" style={{ display:"none" }} onChange={e => handleFile(e.target.files[0])} />
                 {parsing ? (
                   <div>
-                    <div style={{ width:24, height:24, border:"2px solid #111", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite", margin:"0 auto 12px" }} />
+                    <div style={{ width:22, height:22, border:"2px solid #111", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite", margin:"0 auto 10px" }} />
                     <div style={{ fontSize:13, color:"#888" }}>Parsing your chat…</div>
                   </div>
                 ) : data.file ? (
                   <div>
-                    <div style={{ fontSize:24, marginBottom:8 }}>✓</div>
+                    <div style={{ fontSize:22, marginBottom:6 }}>✓</div>
                     <div style={{ fontSize:14, fontWeight:500, color:"#111", marginBottom:4 }}>{data.file.name}</div>
                     <div style={{ fontSize:12, color:"#aaa" }}>
-                      {data.participants?.length > 0 ? `Found ${data.participants.length} participants` : "File uploaded"}{" · "}Click to replace
+                      {data.participants?.length > 0 ? `Found ${data.participants.length} participants` : "File ready"}{" · "}Click to replace
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <div style={{ fontSize:32, marginBottom:8 }}>📁</div>
+                    <div style={{ fontSize:28, marginBottom:8 }}>📁</div>
                     <div style={{ fontSize:14, fontWeight:400, color:"#555", marginBottom:4 }}>Drop your .zip file here</div>
                     <div style={{ fontSize:12, color:"#bbb" }}>or click to browse · max 500MB</div>
                   </div>
                 )}
               </div>
               <ErrorMsg msg={error} />
+
+              {/* Next button — only shown after successful upload */}
+              {data.file && !parsing && (
+                <div style={{ display:"flex", gap:12, marginTop:32, paddingTop:24, borderTop:"1px solid #f0f0f0" }}>
+                  <Btn onClick={advance} style={{ marginLeft:"auto" }}>Next →</Btn>
+                </div>
+              )}
             </div>
           )}
 
-          <NavBtns onNext={advance} nextLabel="Next →" loading={parsing} />
+          {/* Unified waitlist panel — shown for any non-WhatsApp platform */}
+          {selectedPlatform !== "whatsapp" && (
+            <div style={{ border:"1px solid #e0e0e0", padding:"24px 20px", background:"#fafafa" }}>
+              {waitlistSubmitted ? (
+                <div style={{ textAlign:"center", padding:"8px 0" }}>
+                  <div style={{ fontSize:28, marginBottom:12 }}>✓</div>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#111", marginBottom:8 }}>You're on the list.</div>
+                  <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.7, marginBottom:20 }}>We'll email you the moment your platforms are ready.</div>
+                  <a href="#" onClick={e => { e.preventDefault(); selectPlatform("whatsapp"); }} style={{ fontSize:13, color:"#111", fontWeight:500, textDecoration:"underline", fontFamily:"'DM Sans',sans-serif" }}>
+                    Start with WhatsApp instead →
+                  </a>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize:14, fontWeight:500, color:"#111", marginBottom:6 }}>
+                    We're building support for more platforms.
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.6, marginBottom:20 }}>
+                    Leave your email and we'll notify you the moment yours is ready.
+                  </div>
+
+                  {/* Multi-select checkboxes — all non-WhatsApp platforms */}
+                  <div style={{ marginBottom: waitlistChecked["other"] ? 12 : 16 }}>
+                    <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.15em", textTransform:"uppercase", color:"#aaa", marginBottom:10 }}>Which platforms do you use?</div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                      {ALL_PLATFORMS.filter(p => p.id !== "whatsapp").map(p => (
+                        <label key={p.id} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", border: waitlistChecked[p.id] ? "1px solid #111" : "1px solid #e0e0e0", background: waitlistChecked[p.id] ? "#111" : "#fff", cursor:"pointer", transition:"all 0.1s" }}>
+                          <input type="checkbox" checked={!!waitlistChecked[p.id]} onChange={() => toggleWaitlistPlatform(p.id)} style={{ display:"none" }} />
+                          <span style={{ fontSize:13 }}>{p.emoji}</span>
+                          <span style={{ fontSize:12, fontWeight:500, color: waitlistChecked[p.id] ? "#fff" : "#555", fontFamily:"'DM Sans',sans-serif" }}>{p.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* "Other" text field — only visible when Other checkbox is checked */}
+                  {waitlistChecked["other"] && (
+                    <div style={{ marginBottom:16 }}>
+                      <input type="text" value={otherPlatformText} onChange={e => setOtherPlatformText(e.target.value)}
+                        placeholder="Which platform? e.g. GroupMe, Line, WeChat…"
+                        style={{ ...inputStyle }} />
+                    </div>
+                  )}
+
+                  <input type="email" value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    style={{ width:"100%", padding:"10px 14px", border:"1px solid #e0e0e0", fontSize:14, fontWeight:300, color:"#111", fontFamily:"'DM Sans',sans-serif", outline:"none", marginBottom:12 }} />
+
+                  <button onClick={submitWaitlist}
+                    disabled={!waitlistEmail.trim() || !waitlistEmail.includes("@")}
+                    style={{ width:"100%", padding:"12px 0", background: (!waitlistEmail.trim() || !waitlistEmail.includes("@")) ? "#ccc" : "#111", color:"#fff", border:"none", fontSize:13, fontWeight:500, cursor: (!waitlistEmail.trim() || !waitlistEmail.includes("@")) ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                    Notify me
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }
@@ -591,14 +711,120 @@
 
     // ══════════════════════════════════════════════
     // SCREEN 5 — Chapters + Customization
-    // Added: dedication and closing note fields
+    // Parses real timestamps from chatText to find
+    // natural episode breaks (14+ day gaps), then
+    // auto-generates chapter cards with actual date
+    // ranges. Merges down to ≤8 episodes if needed.
     // ══════════════════════════════════════════════
+
+    const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+    function fmtMonthYear(d) {
+      return MONTH_NAMES[d.getMonth()] + " " + d.getFullYear();
+    }
+
+    // Parse every message timestamp from WhatsApp chatText.
+    // Returns sorted array of Date objects.
+    function parseMessageDates(text) {
+      if (!text) return [];
+      const lines = text.split("\n");
+      // iOS:     [12/25/23, 10:30:45 AM]
+      const iosRe = /^\[(\d{1,2})\/(\d{1,2})\/(\d{2,4}),\s*\d{1,2}:\d{2}/;
+      // Android: 12/25/23, 10:30 AM - or 25/12/2023, 22:30 -
+      const androidRe = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),\s*\d{1,2}:\d{2}/;
+      const dates = [];
+      for (const line of lines) {
+        let m = line.match(iosRe) || line.match(androidRe);
+        if (!m) continue;
+        let a = parseInt(m[1], 10);
+        let b = parseInt(m[2], 10);
+        let y = parseInt(m[3], 10);
+        if (y < 100) y += 2000;
+        // WhatsApp iOS is MM/DD/YY; Android can be DD/MM/YYYY or MM/DD/YYYY.
+        // Heuristic: if a > 12, it must be DD (day). Otherwise assume MM/DD (US).
+        let month, day;
+        if (a > 12) { day = a; month = b; }
+        else        { month = a; day = b; }
+        if (month < 1 || month > 12 || day < 1 || day > 31) continue;
+        dates.push(new Date(y, month - 1, day));
+      }
+      dates.sort((x, y2) => x - y2);
+      return dates;
+    }
+
+    // Build episode segments from sorted dates array.
+    // A new episode starts after a gap of ≥ GAP_DAYS days.
+    function buildEpisodes(dates, GAP_DAYS = 14) {
+      if (dates.length === 0) return [];
+      const episodes = [];
+      let start = dates[0];
+      let prev  = dates[0];
+      for (let i = 1; i < dates.length; i++) {
+        const gapMs = dates[i] - prev;
+        const gapDays = gapMs / (1000 * 60 * 60 * 24);
+        if (gapDays >= GAP_DAYS) {
+          episodes.push({ start, end: prev });
+          start = dates[i];
+        }
+        prev = dates[i];
+      }
+      episodes.push({ start, end: prev });
+      return episodes;
+    }
+
+    // Merge the two shortest (by duration) adjacent episodes until count ≤ MAX.
+    function mergeEpisodes(episodes, MAX = 8) {
+      let eps = episodes.slice();
+      while (eps.length > MAX) {
+        // find the pair of adjacent episodes whose merged span is smallest
+        let minSpan = Infinity, minIdx = 0;
+        for (let i = 0; i < eps.length - 1; i++) {
+          const span = eps[i + 1].end - eps[i].start;
+          if (span < minSpan) { minSpan = span; minIdx = i; }
+        }
+        const merged = { start: eps[minIdx].start, end: eps[minIdx + 1].end };
+        eps.splice(minIdx, 1, merged);
+        eps.splice(minIdx + 1, 1);
+      }
+      return eps;
+    }
+
+    // Convert episodes to chapter objects with default title = date range label.
+    function episodesToChapters(episodes) {
+      return episodes.map(ep => {
+        const label = fmtMonthYear(ep.start) === fmtMonthYear(ep.end)
+          ? fmtMonthYear(ep.start)
+          : fmtMonthYear(ep.start) + " – " + fmtMonthYear(ep.end);
+        return { title: label, dateRange: label, _start: ep.start, _end: ep.end };
+      });
+    }
+
+    // Compute total span in whole months between first and last message.
+    function spanMonths(first, last) {
+      return (last.getFullYear() - first.getFullYear()) * 12 + (last.getMonth() - first.getMonth());
+    }
+
     function Screen5({ data, setData, onBack, onNext }) {
-      const [chapters, setChapters] = useState(data.chapters || [
-        { title:"The Beginning", dateRange:"Jan 2021 – Jun 2021" },
-        { title:"Middle Chapter", dateRange:"Jul 2021 – Dec 2021" },
-        { title:"The Latest Season", dateRange:"Jan 2022 – Present" },
-      ]);
+      // Derive chapters from chatText on first render; fall back to saved chapters.
+      const [chapters, setChapters] = useState(() => {
+        if (data.chapters && data.chapters.length > 0) return data.chapters;
+        const dates = parseMessageDates(data.chatText || "");
+        if (dates.length === 0) return [{ title:"Chapter 1", dateRange:"" }];
+        const raw = buildEpisodes(dates, 14);
+        const merged = mergeEpisodes(raw, 8);
+        return episodesToChapters(merged);
+      });
+
+      // Summary stats derived once from chatText
+      const [summaryLine] = useState(() => {
+        const dates = parseMessageDates(data.chatText || "");
+        if (dates.length < 2) return null;
+        const months = spanMonths(dates[0], dates[dates.length - 1]);
+        const raw = buildEpisodes(dates, 14);
+        const merged = mergeEpisodes(raw, 8);
+        return `Your chat spans ${months} month${months !== 1 ? "s" : ""} across ${merged.length} episode${merged.length !== 1 ? "s" : ""}.`;
+      });
+
       const [dedication, setDedication] = useState(data.dedication || "");
       const [closingNote, setClosingNote] = useState(data.closingNote || "");
 
@@ -615,27 +841,27 @@
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Chapters</div>
           <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>How does the story break down?</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:8, lineHeight:1.7 }}>We auto-suggested chapter breaks based on gaps in your chat. Rename them however you like.</p>
-          <div style={{ marginBottom:28, padding:"12px 16px", background:"#fffbe6", border:"1px solid #f0e0a0" }}>
-            <div style={{ fontSize:12, fontWeight:300, color:"#888", lineHeight:1.6 }}>We'll refine these when we process your book. These are starting suggestions.</div>
-          </div>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom: summaryLine ? 16 : 28, lineHeight:1.7 }}>We auto-detected chapter breaks based on gaps in your chat. Rename them however you like.</p>
+
+          {summaryLine && (
+            <div style={{ marginBottom:28, padding:"12px 16px", background:"#f7f7f7", border:"1px solid #e8e8e8" }}>
+              <div style={{ fontSize:13, fontWeight:400, color:"#555", lineHeight:1.6 }}>{summaryLine}</div>
+            </div>
+          )}
 
           <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:16 }}>
             {chapters.map((ch, i) => (
               <div key={i} style={{ border:"1px solid #e0e0e0", padding:"20px 20px 16px", background:"#fafafa" }}>
                 <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:"#e8e8e8", fontWeight:700, lineHeight:1, marginBottom:12 }}>{i+1}</div>
-                <div style={{ marginBottom:12 }}>
+                <div style={{ marginBottom:10 }}>
                   <FieldLabel>Chapter title</FieldLabel>
                   <input type="text" value={ch.title} placeholder={`Chapter ${i+1}`}
                     onChange={e => setChapterField(i,"title",e.target.value)}
                     style={inputStyle} />
                 </div>
-                <div>
-                  <FieldLabel>Date range (approximate)</FieldLabel>
-                  <input type="text" value={ch.dateRange} placeholder="e.g. Jan 2021 – Jun 2021"
-                    onChange={e => setChapterField(i,"dateRange",e.target.value)}
-                    style={inputStyle} />
-                </div>
+                {ch.dateRange && (
+                  <div style={{ fontSize:11, fontWeight:400, color:"#bbb", letterSpacing:"0.05em" }}>{ch.dateRange}</div>
+                )}
               </div>
             ))}
           </div>
@@ -934,6 +1160,25 @@
       const [data, setData] = useState({});
       const [draft, setDraft] = useState(null); // non-null = show banner
       const TOTAL = 7;
+
+      // Fix 2: browser history — push a state entry for each step
+      useEffect(() => {
+        // Replace state on first load, push on subsequent steps
+        const method = step === 1 ? "replaceState" : "pushState";
+        window.history[method]({ step }, "", "#step-" + step);
+      }, [step]);
+
+      // Fix 2: handle browser Back/Forward within the wizard
+      useEffect(() => {
+        function handlePop(e) {
+          if (e.state && typeof e.state.step === "number") {
+            setStep(e.state.step);
+            window.scrollTo(0, 0);
+          }
+        }
+        window.addEventListener("popstate", handlePop);
+        return () => window.removeEventListener("popstate", handlePop);
+      }, []);
 
       // On mount: check for saved draft
       useEffect(() => {
