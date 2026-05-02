@@ -120,6 +120,11 @@
               style={inputStyle}
             />
             <input
+              type="tel" value={addr.phone||""} placeholder="Phone number"
+              onChange={e => onChange("phone", e.target.value)}
+              style={inputStyle}
+            />
+            <input
               type="text" value={addr.line1} placeholder="Street address"
               onChange={e => onChange("line1", e.target.value)}
               style={inputStyle}
@@ -1006,8 +1011,8 @@
     function Screen7({ data, onBack }) {
       const [qty, setQty] = useState(data.qty || 1);
       const [shipMode, setShipMode] = useState(data.shipMode || "single");
-      const [singleAddr, setSingleAddr] = useState(data.singleAddr || { name:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" });
-      const [multiAddrs, setMultiAddrs] = useState(data.multiAddrs || [{ name:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" }]);
+      const [singleAddr, setSingleAddr] = useState(data.singleAddr || { name:"", phone:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" });
+      const [multiAddrs, setMultiAddrs] = useState(data.multiAddrs || [{ name:"", phone:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" }]);
       const [consent, setConsent] = useState(false);
       const [submitting, setSubmitting] = useState(false);
       const [error, setError] = useState("");
@@ -1018,15 +1023,15 @@
       const total = price * qty;
 
       function addAddr() {
-        if (multiAddrs.length < 10) setMultiAddrs(a => [...a, { name:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" }]);
+        if (multiAddrs.length < 10) setMultiAddrs(a => [...a, { name:"", phone:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" }]);
       }
       function removeAddr(i) { setMultiAddrs(a => a.filter((_,idx) => idx!==i)); }
 
       async function handleSubmit() {
         if (!consent) { setError("Please agree to the terms to continue."); return; }
         const primaryAddr = shipMode === "single" ? singleAddr : multiAddrs[0];
-        if (!primaryAddr.name || !primaryAddr.line1 || !primaryAddr.city || !primaryAddr.state || !primaryAddr.zip) {
-          setError("Please complete the shipping address."); return;
+        if (!primaryAddr.name || !primaryAddr.phone || !primaryAddr.line1 || !primaryAddr.city || !primaryAddr.state || !primaryAddr.zip) {
+          setError("Please complete the shipping address, including phone number."); return;
         }
         setSubmitting(true);
         setError("");
@@ -1050,6 +1055,7 @@
           fd.append("total",            String(total));
           fd.append("shipping_mode",    shipMode);
           fd.append("shipping_name",    primaryAddr.name);
+          fd.append("shipping_phone",   primaryAddr.phone || "");
           fd.append("shipping_line1",   primaryAddr.line1);
           fd.append("shipping_line2",   primaryAddr.line2 || "");
           fd.append("shipping_city",    primaryAddr.city);
@@ -1068,7 +1074,7 @@
             season: data.season, cover_color: data.coverLabel || vibe.label,
             cover_hex: data.coverColor || vibe.cover, foil_color: data.foilLabel || foil.label,
             quantity: qty, total, shipping_mode: shipMode,
-            shipping_address: primaryAddr, multi_addresses: shipMode==="multiple" ? multiAddrs : null,
+            shipping_address: { ...primaryAddr }, multi_addresses: shipMode==="multiple" ? multiAddrs : null,
             dedication: data.dedication, closing_note: data.closingNote,
             nicknames: data.nicknames, episodes: data.episodes, proof_email: data.proofEmail,
             date_mode: data.dateMode, date_from: data.dateFrom, date_to: data.dateTo,
