@@ -21,6 +21,8 @@ The script will:
   3. Upload the zip at ourchatbook.com to continue
 """
 
+import glob
+import json
 import os
 import re
 import sys
@@ -366,9 +368,100 @@ def build_chat_txt(messages, handle_map, cur, stage_dir):
     return "\n".join(lines) + "\n"
 
 
+# ── Contacts lookup ────────────────────────────────────────────────────────────
+
+def lookup_contacts(handle_ids):
+    """
+    Attempt to read the macOS AddressBook SQLite database and return a dict
+    mapping {phone_or_email → display_name} for participants in the chat.
+
+    Tries every AddressBook source found under:
+      ~/Library/Application Support/AddressBook/Sources/*/AddressBook-v22.abcddb
+
+    Phone numbers are matched by comparing digit strings (handles country-code
+    variations such as +1 (212) 555-1234 vs +12125551234).
+
+    Returns {} silently on any failure — permission denied, missing file,
+    schema mismatch, or any other exception.
+    """
+    identifiers = set(handle_ids)
+    if not identifiers:
+        return {}
+
+    ab_dir = HOME / "Library" / "Application Support" / "AddressBook" / "Sources"
+    try:
+        ab_paths = list(ab_dir.glob("*/AddressBook-v22.abcddb"))
+    except Exception:
+        return {}
+    if not ab_paths:
+        return {}
+
+    contact_map = {}
+
+    for ab_path in ab_paths:
+        try:
+            conn = sqlite3.connect(f"file:{ab_path}?mode=ro", uri=True)
+            cur  = conn.cursor()
+
+            # Build pk → display name from ZABCDRECORD
+            cur.execute(
+                """
+                SELECT Z_PK,
+                       TRIM(COALESCE(ZFIRSTNAME,'') || ' ' || COALESCE(ZLASTNAME,'')),
+                       COALESCE(ZORGANIZATION, '')
+                FROM ZABCDRECORD
+                """
+            )
+            name_map = {}
+            for pk, full_name, org in cur.fetchall():
+                n = full_name.strip() or org.strip()
+                if n:
+                    name_map[pk] = n
+
+            # Match phone numbers
+            cur.execute(
+                "SELECT ZOWNER, ZFULLNUMBER FROM ZABCDPHONENUMBER WHERE ZFULLNUMBER IS NOT NULL"
+            )
+            for owner, raw_num in cur.fetchall():
+                display = name_map.get(owner)
+                if not display:
+                    continue
+                ab_digits = re.sub(r"\D", "", raw_num)
+                if len(ab_digits) < 7:
+                    continue
+                for ident in identifiers:
+                    if "@" in ident or ident in contact_map:
+                        continue
+                    id_digits = re.sub(r"\D", "", ident)
+                    if len(id_digits) < 7:
+                        continue
+                    # One digit string is a suffix of the other — handles
+                    # country-code prefix variations in either direction.
+                    if ab_digits.endswith(id_digits) or id_digits.endswith(ab_digits):
+                        contact_map[ident] = display
+
+            # Match email / Apple ID
+            cur.execute(
+                "SELECT ZOWNER, ZADDRESS FROM ZABCDEMAILADDRESS WHERE ZADDRESS IS NOT NULL"
+            )
+            for owner, email in cur.fetchall():
+                display = name_map.get(owner)
+                if not display:
+                    continue
+                for ident in identifiers:
+                    if "@" in ident and ident.lower() == email.lower().strip():
+                        contact_map[ident] = display
+
+            conn.close()
+        except Exception:
+            pass  # silently skip any source that errors
+
+    return contact_map
+
+
 # ── Zip builder ────────────────────────────────────────────────────────────────
 
-def build_zip(chat_txt_content, stage_dir, output_path):
+def build_zip(chat_txt_content, stage_dir, output_path, contacts=None):
     """
     Bundle _chat.txt and all staged media into a flat zip.
     Flat structure matches WhatsApp iOS exports so the server parser
@@ -376,6 +469,8 @@ def build_zip(chat_txt_content, stage_dir, output_path):
     """
     with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("_chat.txt", chat_txt_content.encode("utf-8"))
+        if contacts:
+            zf.writestr("contacts.json", json.dumps(contacts, ensure_ascii=False))
         media_files = sorted(f for f in stage_dir.iterdir() if f.is_file())
         for f in media_files:
             zf.write(f, f.name)
@@ -432,6 +527,19 @@ def main():
     chat_id, display_name = pick_chat(chats)
     handle_map = get_handle_map(cur, chat_id)
 
+    # ── Contacts lookup ────────────────────────────────────────────────────────
+    print(_hr())
+    print(
+        "Looking up participant names in your Contacts…\n"
+        "  (Reading a local database on your Mac — nothing leaves your computer.)"
+    )
+    contacts = lookup_contacts(handle_map.values())
+    if contacts:
+        print(f"  ✓  Matched {len(contacts)} contact name(s).")
+    else:
+        print("  –  No contacts matched — you can add names in the wizard.")
+    print()
+
     print("Reading messages…")
     messages   = get_messages(cur, chat_id)
     total_rows = len(messages)
@@ -453,7 +561,7 @@ def main():
         output_path = HOME / "Desktop" / zip_name
 
         print(f"\nBuilding zip…")
-        media_count = build_zip(chat_txt, stage_dir, output_path)
+        media_count = build_zip(chat_txt, stage_dir, output_path, contacts=contacts)
         size_mb     = output_path.stat().st_size / 1_048_576
         print(f"  {media_count} media file(s) + _chat.txt  →  {size_mb:.1f} MB")
 
