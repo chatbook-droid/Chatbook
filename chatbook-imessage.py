@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-imessage_export.py — Chatbook iMessage Export Tool
-====================================================
+chatbook-imessage.py — Chatbook iMessage Export Tool
+=====================================================
 Exports an iMessage group chat to a zip file you can upload at ourchatbook.com.
 
 Requirements
@@ -13,13 +13,12 @@ Requirements
 
 Usage
 -----
-  python3 imessage_export.py
+  python3 chatbook-imessage.py
 
 The script will:
   1. Show your group chats — pick one by number
-  2. Ask a few questions about the book (title, season, names)
-  3. Copy all your media and create a self-contained zip file on your Desktop
-  4. Tell you exactly what to enter when you upload on ourchatbook.com
+  2. Export all messages and media to a zip file on your Desktop
+  3. Upload the zip at ourchatbook.com to continue
 """
 
 import os
@@ -59,8 +58,6 @@ _BINARY_ARTIFACTS = [
 ]
 
 # ── Binary text extraction ─────────────────────────────────────────────────────
-# iMessage sometimes stores message text only in the attributedBody binary blob.
-# These functions extract the human-readable text from it.
 
 def _clean_text(text):
     if not text:
@@ -128,9 +125,8 @@ def mac_ns_to_dt(ns):
 
 def dt_to_wa_timestamp(dt):
     """
-    Format a datetime as a WhatsApp iOS chat.txt timestamp.
+    Format a datetime as a WhatsApp iOS _chat.txt timestamp.
     Example: [3/15/23, 9:04:32 AM]
-    Uses %-m / %-d / %-I for non-zero-padded values (macOS strftime supports this).
     """
     if not dt:
         return "[1/1/00, 12:00:00 AM]"
@@ -229,10 +225,7 @@ def _resolve_path(raw_path):
 
 
 def _heic_to_jpeg(src, dest):
-    """
-    Convert a HEIC/HEIF file to JPEG using macOS's built-in sips tool.
-    No third-party libraries required.  Returns True on success.
-    """
+    """Convert a HEIC/HEIF file to JPEG using macOS's built-in sips tool."""
     try:
         result = subprocess.run(
             ["sips", "-s", "format", "jpeg", str(src), "--out", str(dest)],
@@ -246,18 +239,8 @@ def _heic_to_jpeg(src, dest):
 
 def stage_attachment(raw_path, mime_type, transfer_name, stage_dir, dt, index):
     """
-    Copy/convert an iMessage attachment into stage_dir with a clean filename
-    that is safe to reference in a WhatsApp-format _chat.txt.
-
-    Returns the destination filename (no path prefix) for use as
-    `<attached: filename>`, or None if the file is unavailable.
-
-    Behaviour by type:
-      • HEIC/HEIF  → converted to JPEG with sips; falls back to copy-as-is
-      • Images     → copied directly (WhatsApp parser will base64-embed them)
-      • Videos     → copied directly (server renders as a video pill)
-      • Other      → copied directly (server renders as a document pill)
-      • Missing    → returns None gracefully; no crash
+    Copy/convert an attachment into stage_dir with a clean filename safe for _chat.txt.
+    Returns the destination filename (bare, no path prefix), or None if unavailable.
     """
     src = _resolve_path(raw_path)
     name = (
@@ -268,7 +251,6 @@ def stage_attachment(raw_path, mime_type, transfer_name, stage_dir, dt, index):
     if not name:
         return None
 
-    # Skip iMessage internal payload blobs (not real user media)
     if name.endswith(".pluginPayloadAttachment"):
         return None
 
@@ -283,7 +265,6 @@ def stage_attachment(raw_path, mime_type, transfer_name, stage_dir, dt, index):
         prefix = "ATT"
 
     if not src:
-        # File no longer exists on disk (deleted or iCloud-only)
         return None
 
     if ext in (".heic", ".heif"):
@@ -291,42 +272,31 @@ def stage_attachment(raw_path, mime_type, transfer_name, stage_dir, dt, index):
         dest_path = stage_dir / dest_name
         if _heic_to_jpeg(src, dest_path):
             return dest_name
-        # sips failed — copy the original HEIC; the server can still
-        # embed it as base64 (WeasyPrint may not render it, but it won't crash)
+        # sips failed — copy original; server can still embed as base64
         dest_name = f"{prefix}_{ts}_{index:05d}{ext}"
-        dest_path = stage_dir / dest_name
-        shutil.copy2(src, dest_path)
+        shutil.copy2(src, stage_dir / dest_name)
         return dest_name
 
     dest_name = f"{prefix}_{ts}_{index:05d}{ext}"
-    dest_path = stage_dir / dest_name
-    shutil.copy2(src, dest_path)
+    shutil.copy2(src, stage_dir / dest_name)
     return dest_name
 
 
 # ── _chat.txt builder ──────────────────────────────────────────────────────────
 
-def build_chat_txt(messages, handle_map, nickname_map, my_name, cur, stage_dir):
+def build_chat_txt(messages, handle_map, cur, stage_dir):
     """
     Convert iMessage DB rows to WhatsApp iOS _chat.txt format.
 
-    Format for regular messages:
-        [M/D/YY, H:MM:SS AM] Name: message text
-        [M/D/YY, H:MM:SS AM] Name: <attached: IMG_20230115_093012_00001.jpg>
+    Outgoing messages (is_from_me=1) are labeled "Me".
+    Other senders use their raw phone number or Apple ID — the wizard
+    collects nicknames just like it does for WhatsApp exports.
 
-    Format for system events (no sender):
-        [M/D/YY, H:MM:SS AM] Sarah added Alex to the group
-
-    Rules applied:
-      • Reactions (associated_message_type in REACTION_TYPES) are skipped
-      • Messages with item_type != 0 are treated as system events
-      • Each attachment in a multi-attachment iMessage gets its own line
-      • Inline text and attachments are split onto separate lines
-      • No live network calls; no qlmanage; no third-party libs
+    Each attachment gets its own timestamped line because the server
+    parser's _ATTACHED_SEARCH captures only the first <attached:> per line.
     """
     lines = []
     att_index = [0]
-
     skipped_reactions = 0
     missing_files     = 0
     images_staged     = 0
@@ -344,85 +314,48 @@ def build_chat_txt(messages, handle_map, nickname_map, my_name, cur, stage_dir):
         dt = mac_ns_to_dt(date_ns)
         ts = dt_to_wa_timestamp(dt)
 
-        # ── Skip reactions ─────────────────────────────────────────────────────
+        # Skip reactions
         if assoc_type and assoc_type in REACTION_TYPES:
             skipped_reactions += 1
             continue
 
-        # ── System events (item_type != 0) ─────────────────────────────────────
-        # These are group membership changes, name changes, etc.
-        # Written as timestamp-only lines (no sender field) so the WhatsApp
-        # parser treats them as system events, not attributed messages.
+        # System events (group membership changes, name changes, etc.)
         if item_type != 0:
             label = (
                 group_title
                 or get_message_text(text_col, attributed_body)
                 or "Group updated"
             )
-            label = label.strip().replace("\n", " ")
-            # Guard: any colon in system event text would cause _MSG_RE to
-            # misparse it as "Name: message" (the name capture is [^:]+?).
-            # Replace all colons with an em dash to keep the line safe.
-            label = label.replace(":", "\u2014")
+            label = label.strip().replace("\n", " ").replace(":", "\u2014")
             if label:
                 lines.append(f"{ts} {label}")
             continue
 
-        # ── Regular message ────────────────────────────────────────────────────
+        # Regular message
+        sender = "Me" if is_from_me else handle_map.get(handle_id, f"unknown_{handle_id}")
+        text   = (get_message_text(text_col, attributed_body) or "").strip()
 
-        # Sender display name
-        if is_from_me:
-            sender = my_name
-        else:
-            phone  = handle_map.get(handle_id, f"unknown_{handle_id}")
-            sender = nickname_map.get(phone, phone)
-
-        # Message text
-        text = (get_message_text(text_col, attributed_body) or "").strip()
-
-        # ── Attachments ────────────────────────────────────────────────────────
         att_fnames = []
         if cache_has_attachments:
-            att_rows = get_attachments(cur, msg_id)
-            for raw_path, mime_type, transfer_name in att_rows:
+            for raw_path, mime_type, transfer_name in get_attachments(cur, msg_id):
                 att_index[0] += 1
-                ext = Path(transfer_name or raw_path or "").suffix.lower()
+                ext   = Path(transfer_name or raw_path or "").suffix.lower()
                 fname = stage_attachment(
                     raw_path, mime_type, transfer_name,
                     stage_dir, dt, att_index[0],
                 )
                 if fname:
                     att_fnames.append(fname)
-                    if ext in IMAGE_EXTS:
-                        images_staged += 1
-                    elif ext in VIDEO_EXTS:
-                        videos_staged += 1
-                    else:
-                        other_staged += 1
+                    if ext in IMAGE_EXTS:   images_staged += 1
+                    elif ext in VIDEO_EXTS: videos_staged += 1
+                    else:                   other_staged  += 1
                 else:
                     missing_files += 1
 
-        # ── Build _chat.txt lines ──────────────────────────────────────────────
-        #
-        # The WhatsApp parser's _ATTACHED_SEARCH captures only the FIRST
-        # <attached: ...> per message line.  For multi-attachment iMessages
-        # we therefore write each attachment as its own timestamped line.
-        #
-        # Layout:
-        #   • Text (if present)  → one line: "[ts] Name: text"
-        #   • Each attachment    → one line: "[ts] Name: <attached: fname>"
-        #
-        # If only one attachment and no text, just one line.
-
         if text:
             lines.append(f"{ts} {sender}: {text}")
-
         for fname in att_fnames:
             lines.append(f"{ts} {sender}: <attached: {fname}>")
-
-        # If message had nothing (empty text, all attachments missing) skip it.
-        if not text and not att_fnames:
-            continue
 
     print(f"    Skipped  {skipped_reactions:>5}  reactions")
     print(f"    Missing  {missing_files:>5}  attachment(s) not on disk (iCloud-only or deleted)")
@@ -433,7 +366,23 @@ def build_chat_txt(messages, handle_map, nickname_map, my_name, cur, stage_dir):
     return "\n".join(lines) + "\n"
 
 
-# ── Interactive prompts ────────────────────────────────────────────────────────
+# ── Zip builder ────────────────────────────────────────────────────────────────
+
+def build_zip(chat_txt_content, stage_dir, output_path):
+    """
+    Bundle _chat.txt and all staged media into a flat zip.
+    Flat structure matches WhatsApp iOS exports so the server parser
+    finds _chat.txt immediately and resolves attachment filenames correctly.
+    """
+    with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("_chat.txt", chat_txt_content.encode("utf-8"))
+        media_files = sorted(f for f in stage_dir.iterdir() if f.is_file())
+        for f in media_files:
+            zf.write(f, f.name)
+    return len(media_files)
+
+
+# ── Chat picker ────────────────────────────────────────────────────────────────
 
 def _hr(char="─", width=56):
     return char * width
@@ -464,110 +413,12 @@ def pick_chat(chats):
         print(f"  Please enter a number between 1 and {len(chats)}.")
 
 
-def prompt_book_details(default_title):
-    print(_hr())
-    print("Book details")
-    print(_hr())
-    print(f"\nBook title  (will be embossed on the cover)")
-    title = input(f"  [{default_title}]: ").strip()
-    if not title:
-        title = default_title
-
-    print("\nSeason number  (most people start at 1)")
-    season_raw = input("  [1]: ").strip()
-    try:
-        season = int(season_raw) if season_raw else 1
-        if season < 1:
-            season = 1
-    except ValueError:
-        season = 1
-
-    return title, season
-
-
-def prompt_my_name():
-    print()
-    print(_hr())
-    print("Your name")
-    print(_hr())
-    print("\nYour iMessages will appear under this name in the book.")
-    print("Enter it exactly as you'd like it printed.\n")
-    my_name = input("  Your name: ").strip()
-    if not my_name:
-        my_name = "Me"
-    return my_name
-
-
-def prompt_nicknames(handle_map):
-    """
-    Prompt for a display name for each phone number / Apple ID in the chat.
-    Phone numbers are what iMessage stores; we ask the customer to map them
-    to real names for the cast page and message attribution.
-    """
-    if not handle_map:
-        return {}
-    print()
-    print(_hr())
-    print("Participant names")
-    print(_hr())
-    print(
-        f"\nFound {len(handle_map)} other participant(s).\n"
-        "Press Enter to keep the raw identifier, or type a display name.\n"
-    )
-    nickname_map = {}
-    for phone in sorted(handle_map.values()):
-        nick = input(f'  "{phone}":  ').strip()
-        nickname_map[phone] = nick if nick else phone
-    return nickname_map
-
-
-def prompt_extras():
-    print()
-    print(_hr())
-    print("Optional: Dedication & Closing Note")
-    print(_hr())
-    print(
-        "\nDedication  (appears on the dedication page at the front of the book)\n"
-        "Max 200 characters. Press Enter to skip.\n"
-    )
-    dedication = input("  Dedication: ").strip()[:200]
-
-    print(
-        "\nClosing note  (appears on the final page — a note from you to everyone)\n"
-        "Max 400 characters. Press Enter to skip.\n"
-    )
-    closing_note = input("  Closing note: ").strip()[:400]
-
-    return dedication, closing_note
-
-
-# ── Zip builder ────────────────────────────────────────────────────────────────
-
-def build_zip(chat_txt_content, stage_dir, output_path):
-    """
-    Bundle _chat.txt and all staged media files into a flat zip.
-
-    Flat structure (all files at the root of the zip) matches how
-    WhatsApp iOS exports a chat, so the server parser finds _chat.txt
-    immediately with os.walk and resolves attachment filenames correctly.
-    """
-    with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        # _chat.txt first (cosmetic — parsers don't care about order)
-        zf.writestr("_chat.txt", chat_txt_content.encode("utf-8"))
-        media_files = sorted(f for f in stage_dir.iterdir() if f.is_file())
-        for f in media_files:
-            zf.write(f, f.name)  # arcname = bare filename, no path prefix
-    return len(media_files)
-
-
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
-    # ── Open database ──────────────────────────────────────────────────────────
     conn = open_db()
     cur  = conn.cursor()
 
-    # ── Step 1: pick a chat ────────────────────────────────────────────────────
     chats = list_group_chats(cur)
     if not chats:
         print(
@@ -579,112 +430,40 @@ def main():
         sys.exit(1)
 
     chat_id, display_name = pick_chat(chats)
+    handle_map = get_handle_map(cur, chat_id)
 
-    # ── Step 2: book details ───────────────────────────────────────────────────
-    title, season = prompt_book_details(default_title=display_name)
-
-    # ── Step 3: participants ───────────────────────────────────────────────────
-    handle_map   = get_handle_map(cur, chat_id)
-    my_name      = prompt_my_name()
-    nickname_map = prompt_nicknames(handle_map)
-
-    # ── Step 4: dedication + closing note ──────────────────────────────────────
-    dedication, closing_note = prompt_extras()
-
-    # ── Confirm before processing ──────────────────────────────────────────────
-    print()
-    print(_hr("═"))
-    print("Summary — please confirm before exporting")
-    print(_hr("═"))
-    print(f"\n  Chat      :  {display_name}")
-    print(f"  Title     :  {title}  (Season {season})")
-    print(f"  Your name :  {my_name}")
-    if handle_map:
-        for phone, nick in sorted(nickname_map.items(), key=lambda x: x[1]):
-            print(f"  Participant: {nick}  [{phone}]")
-    if dedication:
-        print(f"  Dedication:  {dedication[:70]}{'…' if len(dedication) > 70 else ''}")
-    if closing_note:
-        print(f"  Closing:     {closing_note[:70]}{'…' if len(closing_note) > 70 else ''}")
-
-    print()
-    try:
-        input("Press Enter to start the export, or Ctrl+C to cancel: ")
-    except KeyboardInterrupt:
-        print("\n\n  Export cancelled.")
-        sys.exit(0)
-
-    # ── Step 5: fetch messages ─────────────────────────────────────────────────
-    print()
-    print(_hr())
-    print("Exporting…")
-    print(_hr())
-    print("\nReading messages from iMessage database…")
-    messages = get_messages(cur, chat_id)
+    print("Reading messages…")
+    messages   = get_messages(cur, chat_id)
     total_rows = len(messages)
     real_msgs  = sum(
         1 for row in messages
-        if row[8] == 0  # item_type == 0
-        and not (row[7] and row[7] in REACTION_TYPES)  # not a reaction
+        if row[8] == 0 and not (row[7] and row[7] in REACTION_TYPES)
     )
-    print(f"  {total_rows} database rows ({real_msgs} messages, rest are reactions/system)")
+    print(f"  {total_rows} database rows ({real_msgs} messages, rest are reactions/system)\n")
 
-    # ── Step 6: stage attachments + write _chat.txt ────────────────────────────
     with tempfile.TemporaryDirectory(prefix="chatbook_") as tmp:
         stage_dir = Path(tmp)
 
-        print("\nConverting messages and collecting media files…")
-        chat_txt = build_chat_txt(
-            messages, handle_map, nickname_map, my_name, cur, stage_dir
-        )
+        print("Collecting media files…")
+        chat_txt = build_chat_txt(messages, handle_map, cur, stage_dir)
         conn.close()
 
-        # ── Step 7: build zip ──────────────────────────────────────────────────
-        safe_title  = re.sub(r"[^\w\s\-]", "", title).strip()[:40]
-        zip_name    = f"Chatbook - {safe_title} - Season {season}.zip"
+        safe_name   = re.sub(r"[^\w\s\-]", "", display_name).strip()[:40]
+        zip_name    = f"Chatbook - {safe_name}.zip"
         output_path = HOME / "Desktop" / zip_name
 
-        print(f"\nBuilding zip file…")
+        print(f"\nBuilding zip…")
         media_count = build_zip(chat_txt, stage_dir, output_path)
         size_mb     = output_path.stat().st_size / 1_048_576
         print(f"  {media_count} media file(s) + _chat.txt  →  {size_mb:.1f} MB")
 
-    # ── Done ───────────────────────────────────────────────────────────────────
     print()
     print(_hr("═"))
-    print("  ✓  Export complete!")
+    print("  ✓  Done!")
     print(_hr("═"))
-    print(f"\n  File saved to your Desktop:\n  {zip_name}")
-
-    print()
-    print(_hr())
-    print("Next steps — what to do on ourchatbook.com")
-    print(_hr())
     print(
-        "\n  1.  Go to ourchatbook.com and click 'Build your Chatbook'\n"
-        "  2.  On the platform screen, select WhatsApp\n"
-        "  3.  Upload the zip file from your Desktop\n"
-        f"  4.  Book title:  {title}\n"
-        f"  5.  Season:      {season}\n"
-    )
-
-    # Print participants for the wizard's nickname screen
-    if nickname_map:
-        print("  6.  Participant nicknames to enter in the wizard:")
-        for phone, nick in sorted(nickname_map.items(), key=lambda x: x[1]):
-            print(f"        {nick}")
-
-    if dedication or closing_note:
-        print()
-        print("  Copy-paste these into the wizard when prompted:\n")
-        if dedication:
-            print(f"  Dedication:\n  {dedication}\n")
-        if closing_note:
-            print(f"  Closing note:\n  {closing_note}\n")
-
-    print()
-    print(
-        "  Questions? Email hello@ourchatbook.com\n"
+        f"\n  File saved to your Desktop:\n  {zip_name}\n"
+        "\n  Go back to ourchatbook.com and click 'Upload your zip' to continue.\n"
     )
 
 
