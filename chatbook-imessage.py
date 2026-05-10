@@ -216,6 +216,54 @@ def get_attachments(cur, msg_id):
     return cur.fetchall()
 
 
+def get_my_sender(cur, chat_id):
+    """
+    Find the local account identifier for outgoing messages.
+
+    1. Check chat.account_login — stored as 'P:+15555551234' (phone) or
+       'E:user@example.com' (Apple ID / email).  Strip the prefix.
+    2. Fall back to message.account on outgoing messages in this chat,
+       which uses the same P:/E: encoding.
+    3. Return None on any failure — caller falls back to "Me".
+    """
+    # Strategy 1: chat.account_login
+    try:
+        cur.execute("SELECT account_login FROM chat WHERE ROWID = ?", (chat_id,))
+        row = cur.fetchone()
+        if row and row[0]:
+            val = row[0].strip()
+            if val.startswith(("P:", "E:")):
+                val = val[2:]
+            if val:
+                return val
+    except Exception:
+        pass
+
+    # Strategy 2: message.account on any outgoing message in this chat
+    try:
+        cur.execute(
+            """
+            SELECT m.account
+            FROM message m
+            JOIN chat_message_join cmj ON m.ROWID = cmj.message_id
+            WHERE cmj.chat_id = ? AND m.is_from_me = 1 AND m.account IS NOT NULL
+            LIMIT 1
+            """,
+            (chat_id,),
+        )
+        row = cur.fetchone()
+        if row and row[0]:
+            val = row[0].strip()
+            if val.startswith(("P:", "E:")):
+                val = val[2:]
+            if val:
+                return val
+    except Exception:
+        pass
+
+    return None
+
+
 # ── Attachment staging ─────────────────────────────────────────────────────────
 
 def _resolve_path(raw_path):
@@ -286,13 +334,13 @@ def stage_attachment(raw_path, mime_type, transfer_name, stage_dir, dt, index):
 
 # ── _chat.txt builder ──────────────────────────────────────────────────────────
 
-def build_chat_txt(messages, handle_map, cur, stage_dir):
+def build_chat_txt(messages, handle_map, my_sender, cur, stage_dir):
     """
     Convert iMessage DB rows to WhatsApp iOS _chat.txt format.
 
-    Outgoing messages (is_from_me=1) are labeled "Me".
-    Other senders use their raw phone number or Apple ID — the wizard
-    collects nicknames just like it does for WhatsApp exports.
+    Outgoing messages (is_from_me=1) use my_sender (the account's phone number
+    or Apple ID extracted from the database).  Other senders use their raw phone
+    number or Apple ID — the wizard collects nicknames just like WhatsApp exports.
 
     Each attachment gets its own timestamped line because the server
     parser's _ATTACHED_SEARCH captures only the first <attached:> per line.
@@ -334,7 +382,7 @@ def build_chat_txt(messages, handle_map, cur, stage_dir):
             continue
 
         # Regular message
-        sender = "Me" if is_from_me else handle_map.get(handle_id, f"unknown_{handle_id}")
+        sender = my_sender if is_from_me else handle_map.get(handle_id, f"unknown_{handle_id}")
         text   = (get_message_text(text_col, attributed_body) or "").strip()
 
         att_fnames = []
@@ -527,13 +575,23 @@ def main():
     chat_id, display_name = pick_chat(chats)
     handle_map = get_handle_map(cur, chat_id)
 
+    # ── Resolve outgoing sender identifier ────────────────────────────────────
+    my_sender_raw = get_my_sender(cur, chat_id)
+    my_sender     = my_sender_raw or "Me"
+
     # ── Contacts lookup ────────────────────────────────────────────────────────
     print(_hr())
     print(
         "Looking up participant names in your Contacts…\n"
         "  (Reading a local database on your Mac — nothing leaves your computer.)"
     )
-    contacts = lookup_contacts(handle_map.values())
+    all_identifiers = list(handle_map.values())
+    if my_sender_raw:
+        all_identifiers.append(my_sender_raw)
+        print(f"  ✓  Your account: {my_sender_raw}")
+    else:
+        print("  –  Could not find your phone number — outgoing messages labeled: Me")
+    contacts = lookup_contacts(all_identifiers)
     if contacts:
         print(f"  ✓  Matched {len(contacts)} contact name(s).")
     else:
@@ -553,7 +611,7 @@ def main():
         stage_dir = Path(tmp)
 
         print("Collecting media files…")
-        chat_txt = build_chat_txt(messages, handle_map, cur, stage_dir)
+        chat_txt = build_chat_txt(messages, handle_map, my_sender, cur, stage_dir)
         conn.close()
 
         safe_name   = re.sub(r"[^\w\s\-]", "", display_name).strip()[:40]
