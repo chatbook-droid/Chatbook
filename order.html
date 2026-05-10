@@ -134,12 +134,19 @@
     async function parseImessageZip(file) {
       const zip = await JSZip.loadAsync(file);
       let chatEntry = null;
+      let contactsEntry = null;
       zip.forEach((path, entry) => {
-        if (!entry.dir && path.replace(/.*\//, "") === "_chat.txt" && !chatEntry) chatEntry = entry;
+        const base = path.replace(/.*\//, "");
+        if (!entry.dir && base === "_chat.txt"    && !chatEntry)    chatEntry    = entry;
+        if (!entry.dir && base === "contacts.json" && !contactsEntry) contactsEntry = entry;
       });
-      if (!chatEntry) return { participants: [], chatText: "" };
+      if (!chatEntry) return { participants: [], chatText: "", contacts: {} };
       const text = await chatEntry.async("string");
-      return { participants: parseImessageParticipants(text), chatText: text };
+      let contacts = {};
+      if (contactsEntry) {
+        try { contacts = JSON.parse(await contactsEntry.async("string")); } catch(e) {}
+      }
+      return { participants: parseImessageParticipants(text), chatText: text, contacts };
     }
 
     // ─────────────────────────────────────────────
@@ -558,8 +565,9 @@
         if (!f || !f.name.toLowerCase().endsWith('.zip')) return;
         setName(n => n || f.name.replace(/^Chatbook\s*-\s*/i, '').replace(/\.zip$/i, '').trim());
         try {
-          const { participants, chatText } = await parseImessageZip(f);
-          setData(d => ({ ...d, file: f, participants, chatText }));
+          const { participants, chatText, contacts } = await parseImessageZip(f);
+          const extra = Object.keys(contacts).length ? { nicknames: contacts } : {};
+          setData(d => ({ ...d, file: f, participants, chatText, ...extra }));
         } catch(err) {
           setData(d => ({ ...d, file: f }));
         }
@@ -1352,8 +1360,9 @@
               const file = e.target.result;
               if (!file) return;
               try {
-                const { participants, chatText } = await parseImessageZip(file);
-                setData(d => ({ ...d, file, participants, chatText }));
+                const { participants, chatText, contacts } = await parseImessageZip(file);
+                const extra = Object.keys(contacts).length ? { nicknames: contacts } : {};
+                setData(d => ({ ...d, file, participants, chatText, ...extra }));
               } catch(err) {
                 setData(d => ({ ...d, file }));
               }
