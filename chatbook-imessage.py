@@ -264,6 +264,52 @@ def get_my_sender(cur, chat_id):
     return None
 
 
+def resolve_apple_id_to_phone(email):
+    """
+    Given an Apple ID email, look it up in the macOS AddressBook SQLite database
+    and return the first associated phone number, or None if not found.
+
+    Searches all AddressBook sources; returns None silently on any failure.
+    """
+    ab_dir = HOME / "Library" / "Application Support" / "AddressBook" / "Sources"
+    try:
+        ab_paths = list(ab_dir.glob("*/AddressBook-v22.abcddb"))
+    except Exception:
+        return None
+
+    for ab_path in ab_paths:
+        try:
+            conn = sqlite3.connect(f"file:{ab_path}?mode=ro", uri=True)
+            c    = conn.cursor()
+
+            # Find the record that owns this email address
+            c.execute(
+                "SELECT ZOWNER FROM ZABCDEMAILADDRESS WHERE LOWER(ZADDRESS) = LOWER(?)",
+                (email.strip(),),
+            )
+            row = c.fetchone()
+            if not row:
+                conn.close()
+                continue
+            owner_pk = row[0]
+
+            # Grab the first phone number for that record
+            c.execute(
+                "SELECT ZFULLNUMBER FROM ZABCDPHONENUMBER WHERE ZOWNER = ? LIMIT 1",
+                (owner_pk,),
+            )
+            row = c.fetchone()
+            conn.close()
+            if row and row[0]:
+                digits = re.sub(r"\D", "", row[0])
+                if len(digits) >= 7:
+                    return row[0].strip()
+        except Exception:
+            pass
+
+    return None
+
+
 # ── Attachment staging ─────────────────────────────────────────────────────────
 
 def _resolve_path(raw_path):
@@ -577,7 +623,15 @@ def main():
 
     # ── Resolve outgoing sender identifier ────────────────────────────────────
     my_sender_raw = get_my_sender(cur, chat_id)
-    my_sender     = my_sender_raw or "Me"
+
+    # If the account identifier is an Apple ID email, try to swap it for the
+    # associated phone number so it appears in the wizard like other participants.
+    if my_sender_raw and "@" in my_sender_raw:
+        phone = resolve_apple_id_to_phone(my_sender_raw)
+        if phone:
+            my_sender_raw = phone
+
+    my_sender = my_sender_raw or "Me"
 
     # ── Contacts lookup ────────────────────────────────────────────────────────
     print(_hr())
