@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getting your iMessage chat ready — Chatbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      color: #111;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV — matches index.html exactly -->
+  <nav style="background:#fff; border-bottom:1px solid #f0f0f0; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100;">
+    <a href="/" style="font-family:'Playfair Display',serif; font-size:17px; font-weight:700; color:#111; text-decoration:none;">Chatbook</a>
+    <a href="/order.html" style="background:#111; padding:8px 16px; font-size:12px; font-weight:500; color:#fff; font-family:'DM Sans',sans-serif; text-decoration:none;">Start your book</a>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div style="max-width:600px; margin:0 auto; padding:48px 24px 80px;">
+
+    <!-- Tag + Headline -->
+    <div style="font-size:10px; font-weight:500; letter-spacing:0.2em; text-transform:uppercase; color:#ccc; margin-bottom:12px;">iMessage</div>
+    <h1 style="font-family:'Playfair Display',serif; font-size:32px; font-weight:700; line-height:1.15; color:#111; margin-bottom:20px;">Getting your iMessage<br>chat ready.</h1>
+    <p style="font-size:15px; font-weight:300; line-height:1.75; color:#888; margin-bottom:52px;">iMessage doesn't have a built-in export button — but we've made it simple. Run a small script on your Mac and it drops a file on your Desktop, ready to upload. Takes about two minutes.</p>
+
+    <!-- STEP 1 -->
+    <div style="margin-bottom:40px; padding-bottom:40px; border-bottom:1px solid #f0f0f0;">
+      <div style="font-family:'Playfair Display',serif; font-size:48px; font-weight:700; color:#f0f0f0; line-height:1; margin-bottom:12px;">1</div>
+      <div style="font-size:16px; font-weight:500; color:#111; margin-bottom:10px;">Download the script</div>
+      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888; margin-bottom:22px;">A single Python file. No installation, no third-party apps. Python ships with every Mac — nothing extra to set up.</p>
+      <a href="/imessage_export.py" download="imessage_export.py"
+         style="display:inline-block; background:#111; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:12px 22px; text-decoration:none; letter-spacing:0.01em;">
+        ↓&nbsp; Download imessage_export.py
+      </a>
+    </div>
+
+    <!-- STEP 2 -->
+    <div style="margin-bottom:40px; padding-bottom:40px; border-bottom:1px solid #f0f0f0;">
+      <div style="font-family:'Playfair Display',serif; font-size:48px; font-weight:700; color:#f0f0f0; line-height:1; margin-bottom:12px;">2</div>
+      <div style="font-size:16px; font-weight:500; color:#111; margin-bottom:10px;">Open Terminal and run it</div>
+      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888; margin-bottom:20px;">Open Terminal — search for it with <span style="font-family:monospace; font-size:13px; background:#f7f7f7; padding:1px 6px; border:1px solid #e8e8e8;">⌘ Space</span> then type "Terminal" — and paste these two commands:</p>
+
+      <div style="background:#f7f7f7; border:1px solid #e8e8e8; padding:18px 20px; margin-bottom:14px;">
+        <div style="font-family:monospace; font-size:13px; color:#333; line-height:2;">
+          <div>cd ~/Downloads</div>
+          <div>python3 imessage_export.py</div>
+        </div>
+      </div>
+
+      <p style="font-size:13px; font-weight:300; line-height:1.7; color:#bbb;">The script will show you a list of your group chats and ask a few questions — title, season number, and a nickname for each person. It takes about a minute to run, then saves a zip file to your Desktop.</p>
+
+      <div style="margin-top:18px; padding:14px 16px; background:#fafafa; border:1px solid #f0f0f0;">
+        <div style="font-size:12px; font-weight:500; color:#aaa; margin-bottom:5px; letter-spacing:0.05em;">If Terminal asks for Full Disk Access</div>
+        <p style="font-size:12px; font-weight:300; color:#bbb; line-height:1.65;">Go to <strong style="font-weight:500; color:#999;">System Settings → Privacy &amp; Security → Full Disk Access</strong> and add Terminal to the list. Then run the command again.</p>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div style="margin-bottom:52px; padding-bottom:52px; border-bottom:1px solid #f0f0f0;">
+      <div style="font-family:'Playfair Display',serif; font-size:48px; font-weight:700; color:#f0f0f0; line-height:1; margin-bottom:12px;">3</div>
+      <div style="font-size:16px; font-weight:500; color:#111; margin-bottom:10px;">Upload your zip and order</div>
+      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888; margin-bottom:24px;">The script saves a file called something like <span style="font-family:monospace; font-size:12px; background:#f7f7f7; padding:1px 6px; border:1px solid #e8e8e8;">Chatbook - Your Chat - Season 1.zip</span> to your Desktop. Upload it on the next page and we'll handle the rest — cover color, foil, shipping, all of it.</p>
+      <a href="/order.html"
+         style="display:inline-block; background:#111; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:12px 22px; text-decoration:none; letter-spacing:0.01em;">
+        Start your book &nbsp;→
+      </a>
+    </div>
+
+    <!-- PRIVACY NOTE -->
+    <div style="background:#fafafa; border:1px solid #f0f0f0; padding:20px 24px;">
+      <div style="font-size:10px; font-weight:500; letter-spacing:0.15em; text-transform:uppercase; color:#ccc; margin-bottom:10px;">Privacy</div>
+      <p style="font-size:13px; font-weight:300; line-height:1.75; color:#888;">The script runs entirely on your Mac — your messages never leave your computer during export. The zip it creates is processed on our servers only long enough to produce your book, then permanently deleted. We don't store, share, or read your messages. <a href="/" style="color:#aaa; text-decoration:underline; text-decoration-color:#ddd;">Full privacy policy →</a></p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER — matches index.html -->
+  <div style="border-top:1px solid #f0f0f0; padding:24px; display:flex; justify-content:space-between; align-items:center;">
+    <div style="font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:#111;">Chatbook</div>
+    <div style="display:flex; gap:20px;">
+      <a href="/" style="font-size:11px; color:#ccc; text-decoration:none; font-family:'DM Sans',sans-serif;">Privacy</a>
+      <a href="/" style="font-size:11px; color:#ccc; text-decoration:none; font-family:'DM Sans',sans-serif;">FAQ</a>
+      <a href="mailto:hello@ourchatbook.com" style="font-size:11px; color:#ccc; text-decoration:none; font-family:'DM Sans',sans-serif;">Contact</a>
+    </div>
+  </div>
+
+</body>
+</html>
