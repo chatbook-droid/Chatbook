@@ -360,7 +360,7 @@ def build_chat_txt(messages, handle_map, cur, stage_dir):
             lines.append(f"{ts} {sender}: <attached: {fname}>")
 
     print(f"    Skipped  {skipped_reactions:>5}  reactions")
-    print(f"    Missing  {missing_files:>5}  attachment(s) not on disk (iCloud-only or deleted)")
+    print(f"    iCloud   {missing_files:>5}  file(s) stored in iCloud only — skipped")
     print(f"    Staged   {images_staged:>5}  image(s)")
     print(f"    Staged   {videos_staged:>5}  video(s)")
     print(f"    Staged   {other_staged:>5}  other file(s)")
@@ -571,7 +571,7 @@ def main():
     print(_hr("═"))
     print(
         f"\n  File saved to your Desktop:\n  {zip_name}\n"
-        "\n  Go back to ourchatbook.com and click 'Upload your zip' to continue.\n"
+        "\n  Drop it on ourchatbook.com/imessage to continue.\n"
     )
 
 
