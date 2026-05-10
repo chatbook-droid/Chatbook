@@ -266,6 +266,10 @@
       const [otherPlatformText, setOtherPlatformText] = useState("");
 
       function selectPlatform(id) {
+        if (id === "imessage") {
+          window.open("/imessage.html", "_blank");
+          return;
+        }
         setSelectedPlatform(id);
         setError("");
         setWaitlistSubmitted(false);
@@ -363,14 +367,16 @@
                 }}>
                   <div style={{ fontSize:22 }}>{p.emoji}</div>
                   <div style={{ fontSize:14, fontWeight:500, color:"#111" }}>{p.label}</div>
-                  <div style={{
-                    fontSize:10, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase",
-                    background: isReady ? "#111" : "#f0f0f0",
-                    color: isReady ? "#fff" : "#aaa",
-                    padding:"2px 7px",
-                  }}>
-                    {isReady ? "Ready now" : p.id === "other" ? "Tell us" : "Coming soon"}
-                  </div>
+                  {p.id !== "imessage" && (
+                    <div style={{
+                      fontSize:10, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase",
+                      background: isReady ? "#111" : "#f0f0f0",
+                      color: isReady ? "#fff" : "#aaa",
+                      padding:"2px 7px",
+                    }}>
+                      {isReady ? "Ready now" : p.id === "other" ? "Tell us" : "Coming soon"}
+                    </div>
+                  )}
                 </button>
               );
             })}
