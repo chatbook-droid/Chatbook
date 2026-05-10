@@ -113,7 +113,8 @@
     // Differences from parseParticipants:
     //   • Only the iOS timestamp format is needed (chatbook-imessage.py
     //     always writes [M/D/YY, H:MM:SS AM] sender: text)
-    //   • "Me" is skipped — it's the user's own outgoing messages
+    //   • "Me" IS included — it's the user's outgoing messages and they
+    //     should be able to give themselves a real name on the nickname screen
     //   • Phone numbers / email addresses ARE kept — those are real
     //     iMessage participants; the WhatsApp phone-number filter
     //     would silently discard them
@@ -125,7 +126,7 @@
         const m = line.match(iosRe);
         if (!m) continue;
         const name = m[1].trim();
-        if (!name || name === "Me" || name.length > 60) continue;
+        if (!name || name.length > 60) continue;
         nameSet.add(name);
       }
       return [...nameSet];
