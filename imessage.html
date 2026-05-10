@@ -84,11 +84,16 @@
     <div style="margin-bottom:52px; padding-bottom:52px; border-bottom:1px solid #f0f0f0;">
       <div style="font-family:'Playfair Display',serif; font-size:48px; font-weight:700; color:#f0f0f0; line-height:1; margin-bottom:12px;">4</div>
       <div style="font-size:16px; font-weight:500; color:#111; margin-bottom:10px;">Upload your zip and order</div>
-      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888; margin-bottom:24px;">The script saves a file called something like <span style="font-family:monospace; font-size:12px; background:#f7f7f7; padding:1px 6px; border:1px solid #e8e8e8;">Chatbook - Your Chat - Season 1.zip</span> to your Desktop. Upload it on the next page and we'll handle the rest — cover color, foil, shipping, all of it.</p>
-      <a href="/order.html?platform=imessage"
-         style="display:inline-block; background:#111; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:12px 22px; text-decoration:none; letter-spacing:0.01em;">
-        Upload your zip &nbsp;→
-      </a>
+      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888; margin-bottom:24px;">The script saves a file called something like <span style="font-family:monospace; font-size:12px; background:#f7f7f7; padding:1px 6px; border:1px solid #e8e8e8;">Chatbook - Your Chat.zip</span> to your Desktop. Drop it below and we'll carry it straight into the wizard.</p>
+
+      <div id="dz" style="border:2px dashed #ddd; padding:32px 24px; text-align:center; cursor:pointer; background:#fff; transition:border-color 0.15s, background 0.15s; margin-bottom:8px;">
+        <input type="file" id="dz-input" accept=".zip" style="display:none">
+        <div style="font-size:24px; margin-bottom:8px;">📁</div>
+        <div style="font-size:14px; font-weight:400; color:#555; margin-bottom:4px; font-family:'DM Sans',sans-serif;">Drop your zip file here</div>
+        <div style="font-size:12px; color:#bbb; font-family:'DM Sans',sans-serif;">or click to browse</div>
+      </div>
+      <div id="dz-status" style="display:none; padding:12px 16px; border:1px solid #e0e0e0; background:#fafafa; align-items:center; justify-content:space-between; margin-bottom:8px;"></div>
+      <div id="dz-error" style="display:none; margin-top:4px; font-size:12px; color:#c00; font-family:'DM Sans',sans-serif;"></div>
     </div>
 
     <!-- PRIVACY NOTE -->
@@ -109,5 +114,61 @@
     </div>
   </div>
 
+  <script>
+  (function () {
+    var dz       = document.getElementById('dz');
+    var dzStatus = document.getElementById('dz-status');
+    var dzError  = document.getElementById('dz-error');
+    var dzInput  = document.getElementById('dz-input');
+
+    function extractChatName(filename) {
+      return filename.replace(/^Chatbook\s*-\s*/i, '').replace(/\.zip$/i, '').trim();
+    }
+
+    function storeFile(file) {
+      return new Promise(function (resolve, reject) {
+        var req = indexedDB.open('chatbook', 1);
+        req.onupgradeneeded = function (e) { e.target.result.createObjectStore('files'); };
+        req.onsuccess = function (e) {
+          var db = e.target.result;
+          var tx = db.transaction('files', 'readwrite');
+          tx.objectStore('files').put(file, 'pending');
+          tx.oncomplete = resolve;
+          tx.onerror    = reject;
+        };
+        req.onerror = reject;
+      });
+    }
+
+    function handleFile(file) {
+      if (!file) return;
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        dzError.textContent = 'Please select a .zip file exported by chatbook-imessage.py.';
+        dzError.style.display = 'block';
+        return;
+      }
+      dzError.style.display = 'none';
+      dz.style.display = 'none';
+      dzStatus.style.display = 'flex';
+      dzStatus.innerHTML =
+        '<span style="font-size:13px;font-family:\'DM Sans\',sans-serif;color:#555;">&#10003;&nbsp;' + file.name + '</span>' +
+        '<span style="font-size:12px;font-family:\'DM Sans\',sans-serif;color:#bbb;">Opening wizard\u2026</span>';
+      storeFile(file).then(function () {
+        window.location.href = '/order.html?platform=imessage&title=' + encodeURIComponent(extractChatName(file.name));
+      }).catch(function () {
+        dz.style.display = 'block';
+        dzStatus.style.display = 'none';
+        dzError.textContent = 'Could not store the file. Please try again.';
+        dzError.style.display = 'block';
+      });
+    }
+
+    dz.addEventListener('dragover',  function (e) { e.preventDefault(); dz.style.borderColor = '#111'; dz.style.background = '#f7f7f7'; });
+    dz.addEventListener('dragleave', function ()  { dz.style.borderColor = '#ddd'; dz.style.background = '#fff'; });
+    dz.addEventListener('drop',      function (e) { e.preventDefault(); dz.style.borderColor = '#ddd'; dz.style.background = '#fff'; handleFile(e.dataTransfer.files[0]); });
+    dz.addEventListener('click',     function ()  { dzInput.click(); });
+    dzInput.addEventListener('change', function () { handleFile(dzInput.files[0]); });
+  }());
+  </script>
 </body>
 </html>
