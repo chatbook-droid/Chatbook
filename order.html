@@ -515,6 +515,20 @@
       const [dateFrom, setDateFrom] = useState(data.dateFrom || "");
       const [dateTo, setDateTo] = useState(data.dateTo || "");
       const [error, setError] = useState("");
+      const fileRef = useRef();
+
+      function handleImessageFile(f) {
+        if (!f || !f.name.toLowerCase().endsWith('.zip')) return;
+        setData(d => ({ ...d, file: f }));
+        setName(n => n || f.name.replace(/^Chatbook\s*-\s*/i, '').replace(/\.zip$/i, '').trim());
+      }
+
+      // When the file loads async from IndexedDB, auto-fill title if still blank
+      useEffect(() => {
+        if (data.file && data.platform === "imessage") {
+          setName(n => n || data.file.name.replace(/^Chatbook\s*-\s*/i, '').replace(/\.zip$/i, '').trim());
+        }
+      }, [data.file]);
 
       useEffect(() => {
         if (!name && data.file) {
@@ -555,6 +569,7 @@
 
       function advance() {
         if (!name.trim()) { setError("Please enter a name for your book."); return; }
+        if (data.platform === "imessage" && !data.file) { setError("Please upload your Chatbook zip file."); return; }
         setData(d => ({ ...d, bookName:name.trim(), season, dateMode, dateFrom, dateTo }));
         onNext();
       }
@@ -570,6 +585,31 @@
             <Book cover={previewCover} spine={previewSpine} foilColor={previewFoil}
               title={name || "Your Book"} season={season} dateRange={dateRangeLabel()} />
           </div>
+
+          {data.platform === "imessage" && (
+            <div style={{ marginBottom:28 }}>
+              <FieldLabel>Your export file</FieldLabel>
+              {data.file ? (
+                <div style={{ padding:"12px 16px", border:"1px solid #e0e0e0", background:"#fafafa", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <span style={{ fontSize:13, fontWeight:400, color:"#555" }}>✓&nbsp;{data.file.name}</span>
+                  <button onClick={() => setData(d => ({ ...d, file:null }))} style={{ background:"none", border:"none", fontSize:12, color:"#aaa", cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Remove</button>
+                </div>
+              ) : (
+                <div
+                  onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor="#111"; e.currentTarget.style.background="#f7f7f7"; }}
+                  onDragLeave={e => { e.currentTarget.style.borderColor="#ddd"; e.currentTarget.style.background="#fff"; }}
+                  onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor="#ddd"; e.currentTarget.style.background="#fff"; handleImessageFile(e.dataTransfer.files[0]); }}
+                  onClick={() => fileRef.current.click()}
+                  style={{ border:"2px dashed #ddd", padding:"28px 24px", textAlign:"center", cursor:"pointer", background:"#fff", transition:"all 0.15s" }}
+                >
+                  <input ref={fileRef} type="file" accept=".zip" style={{ display:"none" }} onChange={e => handleImessageFile(e.target.files[0])} />
+                  <div style={{ fontSize:22, marginBottom:8 }}>📁</div>
+                  <div style={{ fontSize:14, fontWeight:400, color:"#555", marginBottom:4 }}>Drop your Chatbook zip here</div>
+                  <div style={{ fontSize:12, color:"#bbb" }}>or click to browse</div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ marginBottom:24 }}>
             <FieldLabel>Group chat name</FieldLabel>
@@ -1037,9 +1077,6 @@
         if (!primaryAddr.name || !primaryAddr.phone || !primaryAddr.line1 || !primaryAddr.city || !primaryAddr.state || !primaryAddr.zip) {
           setError("Please complete the shipping address, including phone number."); return;
         }
-        if (data.platform === "imessage" && !data.file) {
-          setError("Please upload your Chatbook zip file before placing your order."); return;
-        }
         setSubmitting(true);
         setError("");
 
@@ -1110,26 +1147,6 @@
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Checkout</div>
           <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Let's make it real.</h2>
           <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Tell us where to ship it. Your book ships within 2 weeks.</p>
-
-          {data.platform === "imessage" && (
-            <div style={{ marginBottom:28 }}>
-              <FieldLabel>Your Chatbook zip</FieldLabel>
-              <p style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.6, marginBottom:12 }}>Upload the zip file saved to your Desktop by imessage_export.py.</p>
-              {data.file ? (
-                <div style={{ padding:"12px 16px", border:"1px solid #e0e0e0", background:"#fafafa", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                  <span style={{ fontSize:13, fontWeight:400, color:"#555" }}>✓ {data.file.name}</span>
-                  <button onClick={() => setData(d => ({ ...d, file:null }))} style={{ background:"none", border:"none", fontSize:12, color:"#aaa", cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Remove</button>
-                </div>
-              ) : (
-                <label style={{ display:"block", border:"2px dashed #ddd", padding:"28px 24px", textAlign:"center", cursor:"pointer", background:"#fff" }}>
-                  <input type="file" accept=".zip" style={{ display:"none" }}
-                    onChange={e => { const f = e.target.files[0]; if (f) setData(d => ({ ...d, file:f })); }} />
-                  <div style={{ fontSize:14, fontWeight:400, color:"#555", marginBottom:4 }}>Drop your .zip file here</div>
-                  <div style={{ fontSize:12, color:"#bbb" }}>or click to browse · max 500MB</div>
-                </label>
-              )}
-            </div>
-          )}
 
           <div style={{ border:"1px solid #f0f0f0", marginBottom:28 }}>
             <div style={{ padding:"16px 20px", borderBottom:"1px solid #f0f0f0", background:"#fafafa" }}>
@@ -1239,8 +1256,9 @@
     function Builder() {
       const _urlParams = new URLSearchParams(window.location.search);
       const _platformParam = _urlParams.get('platform');
+      const _titleParam = _urlParams.get('title') || '';
       const [step, setStep] = useState(_platformParam === 'imessage' ? 2 : 1);
-      const [data, setData] = useState(_platformParam === 'imessage' ? { platform: 'imessage' } : {});
+      const [data, setData] = useState(_platformParam === 'imessage' ? { platform: 'imessage', bookName: _titleParam } : {});
       const [draft, setDraft] = useState(null); // non-null = show banner
       const TOTAL = 7;
 
@@ -1274,6 +1292,24 @@
               setDraft(parsed);
             }
           }
+        } catch(e) {}
+      }, []);
+
+      // For iMessage flow: retrieve the file dropped on imessage.html from IndexedDB
+      useEffect(() => {
+        if (_platformParam !== 'imessage') return;
+        try {
+          const req = indexedDB.open('chatbook', 1);
+          req.onsuccess = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('files')) return;
+            const tx = db.transaction('files', 'readonly');
+            const getReq = tx.objectStore('files').get('pending');
+            getReq.onsuccess = e => {
+              const file = e.target.result;
+              if (file) setData(d => ({ ...d, file }));
+            };
+          };
         } catch(e) {}
       }, []);
 
