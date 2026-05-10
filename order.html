@@ -106,6 +106,43 @@
     }
 
     // ─────────────────────────────────────────────
+    // iMessage participant parser + zip helper
+    // Used by both the IndexedDB load in Builder and
+    // the manual upload drop zone in Screen2.
+    //
+    // Differences from parseParticipants:
+    //   • Only the iOS timestamp format is needed (chatbook-imessage.py
+    //     always writes [M/D/YY, H:MM:SS AM] sender: text)
+    //   • "Me" is skipped — it's the user's own outgoing messages
+    //   • Phone numbers / email addresses ARE kept — those are real
+    //     iMessage participants; the WhatsApp phone-number filter
+    //     would silently discard them
+    // ─────────────────────────────────────────────
+    function parseImessageParticipants(text) {
+      const iosRe = /^\[\d{1,2}\/\d{1,2}\/\d{2,4},\s*\d{1,2}:\d{2}(?::\d{2})?\s*[AaPp][Mm]\]\s*([^:]+?):/;
+      const nameSet = new Set();
+      for (const line of text.split("\n")) {
+        const m = line.match(iosRe);
+        if (!m) continue;
+        const name = m[1].trim();
+        if (!name || name === "Me" || name.length > 60) continue;
+        nameSet.add(name);
+      }
+      return [...nameSet];
+    }
+
+    async function parseImessageZip(file) {
+      const zip = await JSZip.loadAsync(file);
+      let chatEntry = null;
+      zip.forEach((path, entry) => {
+        if (!entry.dir && path.replace(/.*\//, "") === "_chat.txt" && !chatEntry) chatEntry = entry;
+      });
+      if (!chatEntry) return { participants: [], chatText: "" };
+      const text = await chatEntry.async("string");
+      return { participants: parseImessageParticipants(text), chatText: text };
+    }
+
+    // ─────────────────────────────────────────────
     // BUG 2 FIX: AddrForm defined at module level so
     // React never unmounts it during Screen7 re-renders
     // ─────────────────────────────────────────────
@@ -517,10 +554,15 @@
       const [error, setError] = useState("");
       const fileRef = useRef();
 
-      function handleImessageFile(f) {
+      async function handleImessageFile(f) {
         if (!f || !f.name.toLowerCase().endsWith('.zip')) return;
-        setData(d => ({ ...d, file: f }));
         setName(n => n || f.name.replace(/^Chatbook\s*-\s*/i, '').replace(/\.zip$/i, '').trim());
+        try {
+          const { participants, chatText } = await parseImessageZip(f);
+          setData(d => ({ ...d, file: f, participants, chatText }));
+        } catch(err) {
+          setData(d => ({ ...d, file: f }));
+        }
       }
 
       // When the file loads async from IndexedDB, auto-fill title if still blank
@@ -1295,7 +1337,8 @@
         } catch(e) {}
       }, []);
 
-      // For iMessage flow: retrieve the file dropped on imessage.html from IndexedDB
+      // For iMessage flow: retrieve the file dropped on imessage.html from IndexedDB,
+      // then parse _chat.txt to extract participants and chatText.
       useEffect(() => {
         if (_platformParam !== 'imessage') return;
         try {
@@ -1305,9 +1348,15 @@
             if (!db.objectStoreNames.contains('files')) return;
             const tx = db.transaction('files', 'readonly');
             const getReq = tx.objectStore('files').get('pending');
-            getReq.onsuccess = e => {
+            getReq.onsuccess = async e => {
               const file = e.target.result;
-              if (file) setData(d => ({ ...d, file }));
+              if (!file) return;
+              try {
+                const { participants, chatText } = await parseImessageZip(file);
+                setData(d => ({ ...d, file, participants, chatText }));
+              } catch(err) {
+                setData(d => ({ ...d, file }));
+              }
             };
           };
         } catch(e) {}
