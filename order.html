@@ -39,7 +39,7 @@
 
     const FOILS = [
       { id:"gold",   label:"Gold",   color:"#C9A84C" },
-      { id:"silver", label:"Silver", color:"#C0C0C0" },
+      { id:"black",  label:"Black",  color:"#000000" },
       { id:"white",  label:"White",  color:"#F5F5F5" },
     ];
 
@@ -669,7 +669,7 @@
             <FieldLabel>Foil color</FieldLabel>
             <div style={{ display:"flex", gap:8 }}>
               {FOILS.map(f => (
-                <button key={f.id} onClick={() => setFoil(f)} style={{ padding:"8px 20px", border:foil.id===f.id?"2px solid #111":"1px solid #e0e0e0", background:f.color, color:f.id==="gold"?"#5a3e00":f.id==="white"?"#888":"#333", fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", boxShadow:foil.id===f.id?"0 2px 8px rgba(0,0,0,0.15)":"none", transition:"all 0.15s" }}>{f.label}</button>
+                <button key={f.id} onClick={() => setFoil(f)} style={{ padding:"8px 20px", border:foil.id===f.id?"2px solid #111":"1px solid #e0e0e0", background:f.color, color:f.id==="gold"?"#5a3e00":f.id==="white"?"#888":f.id==="black"?"#fff":"#333", fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", boxShadow:foil.id===f.id?"0 2px 8px rgba(0,0,0,0.15)":"none", transition:"all 0.15s" }}>{f.label}</button>
               ))}
             </div>
           </div>
