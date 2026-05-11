@@ -760,7 +760,10 @@
       const [closingNote, setClosingNote] = useState(data.closingNote || "");
 
       function advance() {
-        setData(d => ({ ...d, episodes, dedication, closingNote }));
+        const _dates = parseMessageDates(data.chatText || "");
+        const dateFrom = _dates.length > 0 ? _dates[0].toISOString().split("T")[0] : "";
+        const dateTo   = _dates.length > 0 ? _dates[_dates.length - 1].toISOString().split("T")[0] : "";
+        setData(d => ({ ...d, episodes, dedication, closingNote, dateFrom, dateTo }));
         onNext();
       }
 
@@ -929,6 +932,8 @@
           fd.append("shipping_country", primaryAddr.country || "US");
           fd.append("dedication",       data.dedication || "");
           fd.append("closing_note",     data.closingNote || "");
+          fd.append("date_from",         data.dateFrom || "");
+          fd.append("date_to",           data.dateTo   || "");
           fd.append("nicknames",        JSON.stringify(data.nicknames || {}));
           fd.append("episodes",         JSON.stringify(data.episodes || []));
 
