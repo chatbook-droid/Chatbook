@@ -16,9 +16,41 @@
       color: #111;
       -webkit-font-smoothing: antialiased;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   </style>
 </head>
 <body>
+
+  <!-- Progress overlay -->
+  <div id="progress-overlay" style="display:none; position:fixed; inset:0; background:#fff; z-index:1000; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 24px;">
+    <div style="font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:#111; margin-bottom:48px; letter-spacing:0.02em;">Chatbook</div>
+    <div id="progress-copy" style="font-size:17px; font-weight:300; color:#888; margin-bottom:36px; font-family:'DM Sans',sans-serif; min-height:26px; animation:fadein 0.4s ease;"></div>
+    <div style="width:28px; height:28px; border:2px solid #f0f0f0; border-top-color:#111; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+  </div>
+
+  <!-- Too-short dead-end screen -->
+  <div id="too-short-screen" style="display:none; position:fixed; inset:0; background:#fff; z-index:1000; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 24px;">
+    <div style="font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:#111; margin-bottom:48px;">Chatbook</div>
+    <div style="max-width:440px;">
+      <div style="font-family:'Playfair Display',serif; font-size:28px; font-weight:700; color:#111; line-height:1.25; margin-bottom:18px;">Your chat is a little short for now.</div>
+      <p style="font-size:15px; font-weight:300; line-height:1.8; color:#888; margin-bottom:36px;">Your chat is a little too short for us to print right now — but leave your email and we'll let you know when we have something for you.</p>
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <input id="too-short-email" type="email" placeholder="your@email.com"
+          style="flex:1; padding:12px 16px; border:1px solid #e0e0e0; font-size:14px; font-family:'DM Sans',sans-serif; font-weight:300; outline:none; color:#111;" />
+        <button id="too-short-btn"
+          style="padding:12px 20px; background:#111; color:#fff; border:none; font-size:14px; font-weight:500; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; transition:opacity 0.15s;">
+          Notify me
+        </button>
+      </div>
+      <div id="too-short-confirm" style="display:none; font-size:14px; font-weight:300; color:#888; font-family:'DM Sans',sans-serif; margin-bottom:8px;">
+        You're on the list. We'll reach out when your chat qualifies.
+      </div>
+      <div style="margin-top:32px;">
+        <a href="/" style="font-size:13px; color:#ccc; text-decoration:none; font-family:'DM Sans',sans-serif;">← Back to Chatbook</a>
+      </div>
+    </div>
+  </div>
 
   <!-- NAV — matches index.html exactly -->
   <nav style="background:#fff; border-bottom:1px solid #f0f0f0; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100;">
@@ -147,30 +179,62 @@
   }
 
   (function () {
+    var API = 'https://aware-nature-production-7dda.up.railway.app';
+    var COPY_CYCLE = [
+      'Reading your chat\u2026',
+      'Finding the good stuff\u2026',
+      'Counting the inside jokes\u2026',
+      'Figuring out who texts the most\u2026',
+      'Almost there\u2026',
+    ];
+
     var dz       = document.getElementById('dz');
     var dzStatus = document.getElementById('dz-status');
     var dzError  = document.getElementById('dz-error');
     var dzInput  = document.getElementById('dz-input');
+    var overlay  = document.getElementById('progress-overlay');
+    var copyEl   = document.getElementById('progress-copy');
+    var tooShort = document.getElementById('too-short-screen');
 
+    // ── Progress overlay ──────────────────────────────────────────────────────
+    var copyTimer = null;
+    function showOverlay() {
+      var idx = 0;
+      copyEl.textContent = COPY_CYCLE[0];
+      overlay.style.display = 'flex';
+      copyTimer = setInterval(function () {
+        idx = (idx + 1) % COPY_CYCLE.length;
+        copyEl.textContent = COPY_CYCLE[idx];
+      }, 1800);
+    }
+
+    // ── IndexedDB helpers ─────────────────────────────────────────────────────
+    function openDB() {
+      return new Promise(function (resolve, reject) {
+        var req = indexedDB.open('chatbook', 1);
+        req.onupgradeneeded = function (e) { e.target.result.createObjectStore('files'); };
+        req.onsuccess  = function (e) { resolve(e.target.result); };
+        req.onerror    = reject;
+      });
+    }
+
+    function storeInDB(key, value) {
+      return openDB().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction('files', 'readwrite');
+          tx.objectStore('files').put(value, key);
+          tx.oncomplete = resolve;
+          tx.onerror    = reject;
+        });
+      });
+    }
+
+    // ── Name extraction ───────────────────────────────────────────────────────
     function extractChatName(filename) {
       return filename.replace(/^Chatbook\s*-\s*/i, '').replace(/\.zip$/i, '').trim();
     }
 
-    function storeFile(file) {
-      return new Promise(function (resolve, reject) {
-        var req = indexedDB.open('chatbook', 1);
-        req.onupgradeneeded = function (e) { e.target.result.createObjectStore('files'); };
-        req.onsuccess = function (e) {
-          var db = e.target.result;
-          var tx = db.transaction('files', 'readwrite');
-          tx.objectStore('files').put(file, 'pending');
-          tx.oncomplete = resolve;
-          tx.onerror    = reject;
-        };
-        req.onerror = reject;
-      });
-    }
-
+    // ── Main file handler ─────────────────────────────────────────────────────
     function handleFile(file) {
       if (!file) return;
       if (!file.name.toLowerCase().endsWith('.zip')) {
@@ -180,25 +244,68 @@
       }
       dzError.style.display = 'none';
       dz.style.display = 'none';
-      dzStatus.style.display = 'flex';
-      dzStatus.innerHTML =
-        '<span style="font-size:13px;font-family:\'DM Sans\',sans-serif;color:#555;">&#10003;&nbsp;' + file.name + '</span>' +
-        '<span style="font-size:12px;font-family:\'DM Sans\',sans-serif;color:#bbb;">Opening wizard\u2026</span>';
-      storeFile(file).then(function () {
-        window.location.href = '/order.html?platform=imessage&title=' + encodeURIComponent(extractChatName(file.name));
+      showOverlay();
+
+      var chatName    = extractChatName(file.name);
+      var redirectUrl = '/order.html?platform=imessage&title=' + encodeURIComponent(chatName);
+
+      var fd = new FormData();
+      fd.append('file', file);
+
+      Promise.all([
+        storeInDB('pending', file),
+        fetch(API + '/pre-parse', { method: 'POST', body: fd })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .catch(function ()  { return null; }),
+      ]).then(function (results) {
+        clearInterval(copyTimer);
+        var parseResult = results[1];
+
+        if (parseResult && parseResult.status === 'too_short') {
+          overlay.style.display = 'none';
+          tooShort.style.display = 'flex';
+          return;
+        }
+
+        if (parseResult && (parseResult.status === 'one_season' || parseResult.status === 'multiple_seasons')) {
+          storeInDB('pre_parse_result', parseResult).then(function () {
+            window.location.href = redirectUrl;
+          }).catch(function () {
+            window.location.href = redirectUrl;
+          });
+        } else {
+          window.location.href = redirectUrl;
+        }
       }).catch(function () {
-        dz.style.display = 'block';
-        dzStatus.style.display = 'none';
-        dzError.textContent = 'Could not store the file. Please try again.';
-        dzError.style.display = 'block';
+        clearInterval(copyTimer);
+        window.location.href = redirectUrl;
       });
     }
 
+    // ── Drop zone events ──────────────────────────────────────────────────────
     dz.addEventListener('dragover',  function (e) { e.preventDefault(); dz.style.borderColor = '#111'; dz.style.background = '#f7f7f7'; });
     dz.addEventListener('dragleave', function ()  { dz.style.borderColor = '#ddd'; dz.style.background = '#fff'; });
     dz.addEventListener('drop',      function (e) { e.preventDefault(); dz.style.borderColor = '#ddd'; dz.style.background = '#fff'; handleFile(e.dataTransfer.files[0]); });
     dz.addEventListener('click',     function ()  { dzInput.click(); });
     dzInput.addEventListener('change', function () { handleFile(dzInput.files[0]); });
+
+    // ── Too-short email capture ───────────────────────────────────────────────
+    document.getElementById('too-short-btn').addEventListener('click', function () {
+      var email   = document.getElementById('too-short-email').value.trim();
+      var confirm = document.getElementById('too-short-confirm');
+      var btn     = document.getElementById('too-short-btn');
+      if (!email || !email.includes('@')) return;
+      btn.disabled = true;
+      fetch(API + '/notify-me', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email }),
+      }).then(function () {
+        confirm.style.display = 'block';
+      }).catch(function () {
+        confirm.style.display = 'block';
+      });
+    });
   }());
   </script>
 </body>
