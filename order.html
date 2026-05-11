@@ -404,14 +404,16 @@
               return (
                 <button key={p.id} onClick={() => selectPlatform(p.id)} style={{
                   display:"flex", flexDirection:"column", alignItems:"flex-start",
-                  padding:"16px 18px", gap:6,
-                  border: isSelected ? "2px solid #111" : "1px solid #e0e0e0",
+                  padding: isReady ? "20px 22px" : "14px 16px",
+                  gap: isReady ? 9 : 5,
+                  border: isSelected ? "2px solid #111" : isReady ? "1px solid #ccc" : "1px solid #efefef",
                   background: isSelected ? "#fafafa" : "#fff",
                   cursor:"pointer", textAlign:"left", transition:"all 0.15s",
                   fontFamily:"'DM Sans',sans-serif",
+                  opacity: isReady ? 1 : 0.5,
                 }}>
-                  <div style={{ fontSize:22 }}>{p.emoji}</div>
-                  <div style={{ fontSize:14, fontWeight:500, color:"#111" }}>{p.label}</div>
+                  <div style={{ fontSize: isReady ? 26 : 20 }}>{p.emoji}</div>
+                  <div style={{ fontSize: isReady ? 15 : 13, fontWeight: isReady ? 500 : 400, color:"#111" }}>{p.label}</div>
                   <div style={{
                     fontSize:10, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase",
                     background: isReady ? "#111" : "#f0f0f0",
@@ -556,9 +558,6 @@
     function Screen2({ data, setData, onBack, onNext }) {
       const [name, setName] = useState(data.bookName || "");
       const [season, setSeason] = useState(data.season || 1);
-      const [dateMode, setDateMode] = useState(data.dateMode || "all");
-      const [dateFrom, setDateFrom] = useState(data.dateFrom || "");
-      const [dateTo, setDateTo] = useState(data.dateTo || "");
       const [error, setError] = useState("");
       const fileRef = useRef();
 
@@ -593,25 +592,16 @@
         }
       }, []);
 
-      // Compute live date range string for book face
-      function dateRangeLabel() {
-        if (dateMode === "all") {
-          const dates = parseMessageDates(data.chatText || "");
-          if (dates.length >= 2) {
-            const first = dates[0];
-            const last  = dates[dates.length - 1];
-            const fmt = d => MONTH_NAMES[d.getMonth()] + " " + d.getFullYear();
-            return fmt(first) === fmt(last) ? fmt(first) : fmt(first) + " – " + fmt(last);
-          }
-          return "All messages";
+      // Auto-detect date range from chat text for book face preview
+      const dateRange = (() => {
+        const dates = parseMessageDates(data.chatText || "");
+        if (dates.length >= 2) {
+          const fmt = d => MONTH_NAMES[d.getMonth()] + " " + d.getFullYear();
+          const f = fmt(dates[0]), l = fmt(dates[dates.length - 1]);
+          return f === l ? f : f + " \u2013 " + l;
         }
-        const parts = [];
-        if (dateFrom) parts.push(dateFrom);
-        if (dateTo) parts.push(dateTo);
-        if (parts.length === 2) return parts[0] + " – " + parts[1];
-        if (parts.length === 1) return "From " + parts[0];
-        return "Custom range";
-      }
+        return "";
+      })();
 
       // Use cover/foil from data if already chosen, else defaults
       const previewCover = data.coverColor || VIBES[0].cover;
@@ -621,7 +611,7 @@
       function advance() {
         if (!name.trim()) { setError("Please enter a name for your book."); return; }
         if (data.platform === "imessage" && !data.file) { setError("Please upload your Chatbook zip file."); return; }
-        setData(d => ({ ...d, bookName:name.trim(), season, dateMode, dateFrom, dateTo }));
+        setData(d => ({ ...d, bookName:name.trim(), season }));
         onNext();
       }
 
@@ -634,7 +624,7 @@
           {/* Live book preview — updates as user types */}
           <div style={{ marginBottom:36 }}>
             <Book cover={previewCover} spine={previewSpine} foilColor={previewFoil}
-              title={name || "Your Book"} season={season} dateRange={dateRangeLabel()} />
+              title={name || "Your Book"} season={season} dateRange={dateRange} />
           </div>
 
           {data.platform === "imessage" && (
@@ -670,7 +660,7 @@
             <ErrorMsg msg={error} />
           </div>
 
-          <div style={{ marginBottom:32 }}>
+          <div style={{ marginBottom:8 }}>
             <FieldLabel>Season number</FieldLabel>
             <input
               type="number" min="1" max="99" value={season}
@@ -680,27 +670,6 @@
             <div style={{ marginTop:8, fontSize:12, fontWeight:300, color:"#bbb", lineHeight:1.5 }}>
               Most people start at Season 1. You can always come back for Season 2.
             </div>
-          </div>
-
-          <div style={{ marginBottom:8 }}>
-            <FieldLabel>Date range</FieldLabel>
-            <div style={{ display:"flex", gap:0, marginBottom:16 }}>
-              {[["all","All messages"],["custom","Custom range"]].map(([val,label]) => (
-                <button key={val} onClick={() => setDateMode(val)} style={{ padding:"10px 20px", border:"1px solid #e0e0e0", background:dateMode===val?"#111":"#fff", color:dateMode===val?"#fff":"#555", fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginRight:-1 }}>{label}</button>
-              ))}
-            </div>
-            {dateMode === "custom" && (
-              <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
-                <div style={{ flex:"1 1 160px" }}>
-                  <FieldLabel>From</FieldLabel>
-                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e0e0e0", fontSize:14, fontFamily:"'DM Sans',sans-serif" }} />
-                </div>
-                <div style={{ flex:"1 1 160px" }}>
-                  <FieldLabel>To</FieldLabel>
-                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e0e0e0", fontSize:14, fontFamily:"'DM Sans',sans-serif" }} />
-                </div>
-              </div>
-            )}
           </div>
 
           <NavBtns onBack={onBack} onNext={advance} />
@@ -1186,7 +1155,7 @@
 
           if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
           localStorage.removeItem("chatbook_order_draft"); // Fix 1: clear draft on success
-          window.location.href = "https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00";
+          window.location.href = "https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00?prefilled_quantity=" + qty;
         } catch(e) {
           setError("Something went wrong: " + e.message + ". Please try again or email hello@ourchatbook.com.");
           setSubmitting(false);
