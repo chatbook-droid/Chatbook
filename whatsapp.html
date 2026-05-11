@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getting your WhatsApp chat ready — Chatbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      color: #111;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav style="background:#fff; border-bottom:1px solid #f0f0f0; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100;">
+    <a href="/" style="font-family:'Playfair Display',serif; font-size:17px; font-weight:700; color:#111; text-decoration:none;">Chatbook</a>
+    <a href="/order.html" style="background:#111; padding:8px 16px; font-size:12px; font-weight:500; color:#fff; font-family:'DM Sans',sans-serif; text-decoration:none;">Start your book</a>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div style="max-width:600px; margin:0 auto; padding:48px 24px 80px;">
+
+    <!-- Tag + Headline -->
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+      <div style="font-size:10px; font-weight:500; letter-spacing:0.2em; text-transform:uppercase; color:#ccc;">WhatsApp</div>
+    </div>
+    <h1 style="font-family:'Playfair Display',serif; font-size:32px; font-weight:700; line-height:1.15; color:#111; margin-bottom:20px;">Getting your WhatsApp<br>chat ready.</h1>
+    <p style="font-size:15px; font-weight:300; line-height:1.75; color:#888; margin-bottom:52px;">WhatsApp has a built-in export — no extra tools needed. Export straight from the app, then drop the file below. Takes about a minute.</p>
+
+    <!-- STEP 1 -->
+    <div style="margin-bottom:40px; padding-bottom:40px; border-bottom:1px solid #f0f0f0;">
+      <div style="font-family:'Playfair Display',serif; font-size:48px; font-weight:700; color:#f0f0f0; line-height:1; margin-bottom:12px;">1</div>
+      <div style="font-size:16px; font-weight:500; color:#111; margin-bottom:10px;">Open the group chat</div>
+      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888;">Open WhatsApp on your phone and go to the group chat you want to print.</p>
+    </div>
+
+    <!-- STEP 2 -->
+    <div style="margin-bottom:40px; padding-bottom:40px; border-bottom:1px solid #f0f0f0;">
+      <div style="font-family:'Playfair Display',serif; font-size:48px; font-weight:700; color:#f0f0f0; line-height:1; margin-bottom:12px;">2</div>
+      <div style="font-size:16px; font-weight:500; color:#111; margin-bottom:10px;">Export the chat</div>
+      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888; margin-bottom:16px;">Tap the group name at the top to open group info. Scroll down and tap <strong style="font-weight:500; color:#999;">Export Chat</strong>. When prompted, choose <strong style="font-weight:500; color:#999;">With Media</strong> to include photos and videos.</p>
+      <div style="background:#fafafa; border:1px solid #f0f0f0; padding:14px 18px;">
+        <div style="font-size:12px; font-weight:500; color:#aaa; margin-bottom:8px; letter-spacing:0.05em;">On iPhone</div>
+        <p style="font-size:13px; font-weight:300; color:#888; line-height:1.65;">Tap the group name → scroll to bottom → <em>Export Chat</em> → <em>With Media</em> → save to Files or share to yourself.</p>
+        <div style="height:1px; background:#f0f0f0; margin:12px 0;"></div>
+        <div style="font-size:12px; font-weight:500; color:#aaa; margin-bottom:8px; letter-spacing:0.05em;">On Android</div>
+        <p style="font-size:13px; font-weight:300; color:#888; line-height:1.65;">Tap the group name → More → <em>Export Chat</em> → <em>With Media</em> → send to yourself via email or save to drive.</p>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div style="margin-bottom:52px; padding-bottom:52px; border-bottom:1px solid #f0f0f0;">
+      <div style="font-family:'Playfair Display',serif; font-size:48px; font-weight:700; color:#f0f0f0; line-height:1; margin-bottom:12px;">3</div>
+      <div style="font-size:16px; font-weight:500; color:#111; margin-bottom:10px;">Upload your zip and order</div>
+      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888; margin-bottom:24px;">Transfer the zip to your computer — AirDrop, email yourself, or save to iCloud/Google Drive. Then drop it below and we'll carry it straight into the wizard.</p>
+
+      <div id="dz" style="border:2px dashed #ddd; padding:32px 24px; text-align:center; cursor:pointer; background:#fff; transition:border-color 0.15s, background 0.15s; margin-bottom:8px;">
+        <input type="file" id="dz-input" accept=".zip" style="display:none">
+        <div style="font-size:24px; margin-bottom:8px;">📁</div>
+        <div style="font-size:14px; font-weight:400; color:#555; margin-bottom:4px; font-family:'DM Sans',sans-serif;">Drop your zip file here</div>
+        <div style="font-size:12px; color:#bbb; font-family:'DM Sans',sans-serif;">or click to browse</div>
+      </div>
+      <div id="dz-status" style="display:none; padding:12px 16px; border:1px solid #e0e0e0; background:#fafafa; align-items:center; justify-content:space-between; margin-bottom:8px;"></div>
+      <div id="dz-error" style="display:none; margin-top:4px; font-size:12px; color:#c00; font-family:'DM Sans',sans-serif;"></div>
+    </div>
+
+    <!-- PRIVACY NOTE -->
+    <div style="background:#fafafa; border:1px solid #f0f0f0; padding:20px 24px;">
+      <div style="font-size:10px; font-weight:500; letter-spacing:0.15em; text-transform:uppercase; color:#ccc; margin-bottom:10px;">Privacy</div>
+      <p style="font-size:13px; font-weight:300; line-height:1.75; color:#888;">Your zip is processed on our servers only long enough to produce your book, then permanently deleted. We don't store, share, or read your messages. <a href="/" style="color:#aaa; text-decoration:underline; text-decoration-color:#ddd;">Full privacy policy →</a></p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div style="border-top:1px solid #f0f0f0; padding:24px; display:flex; justify-content:space-between; align-items:center;">
+    <div style="font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:#111;">Chatbook</div>
+    <div style="display:flex; gap:20px;">
+      <a href="/" style="font-size:11px; color:#ccc; text-decoration:none; font-family:'DM Sans',sans-serif;">Privacy</a>
+      <a href="/" style="font-size:11px; color:#ccc; text-decoration:none; font-family:'DM Sans',sans-serif;">FAQ</a>
+      <a href="mailto:hello@ourchatbook.com" style="font-size:11px; color:#ccc; text-decoration:none; font-family:'DM Sans',sans-serif;">Contact</a>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    var dz       = document.getElementById('dz');
+    var dzStatus = document.getElementById('dz-status');
+    var dzError  = document.getElementById('dz-error');
+    var dzInput  = document.getElementById('dz-input');
+
+    function extractChatName(filename) {
+      return filename
+        .replace(/^WhatsApp Chat with\s+/i, '')
+        .replace(/^WhatsApp Chat\s*[-–]\s*/i, '')
+        .replace(/\.zip$/i, '')
+        .trim();
+    }
+
+    function storeFile(file) {
+      return new Promise(function (resolve, reject) {
+        var req = indexedDB.open('chatbook', 1);
+        req.onupgradeneeded = function (e) { e.target.result.createObjectStore('files'); };
+        req.onsuccess = function (e) {
+          var db = e.target.result;
+          var tx = db.transaction('files', 'readwrite');
+          tx.objectStore('files').put(file, 'pending');
+          tx.oncomplete = resolve;
+          tx.onerror    = reject;
+        };
+        req.onerror = reject;
+      });
+    }
+
+    function handleFile(file) {
+      if (!file) return;
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        dzError.textContent = 'Please select a .zip file exported from WhatsApp.';
+        dzError.style.display = 'block';
+        return;
+      }
+      dzError.style.display = 'none';
+      dz.style.display = 'none';
+      dzStatus.style.display = 'flex';
+      dzStatus.innerHTML =
+        '<span style="font-size:13px;font-family:\'DM Sans\',sans-serif;color:#555;">&#10003;&nbsp;' + file.name + '</span>' +
+        '<span style="font-size:12px;font-family:\'DM Sans\',sans-serif;color:#bbb;">Opening wizard\u2026</span>';
+      storeFile(file).then(function () {
+        window.location.href = '/order.html?platform=whatsapp&title=' + encodeURIComponent(extractChatName(file.name));
+      }).catch(function () {
+        dz.style.display = 'block';
+        dzStatus.style.display = 'none';
+        dzError.textContent = 'Could not store the file. Please try again.';
+        dzError.style.display = 'block';
+      });
+    }
+
+    dz.addEventListener('dragover',  function (e) { e.preventDefault(); dz.style.borderColor = '#111'; dz.style.background = '#f7f7f7'; });
+    dz.addEventListener('dragleave', function ()  { dz.style.borderColor = '#ddd'; dz.style.background = '#fff'; });
+    dz.addEventListener('drop',      function (e) { e.preventDefault(); dz.style.borderColor = '#ddd'; dz.style.background = '#fff'; handleFile(e.dataTransfer.files[0]); });
+    dz.addEventListener('click',     function ()  { dzInput.click(); });
+    dzInput.addEventListener('change', function () { handleFile(dzInput.files[0]); });
+  }());
+  </script>
+</body>
+</html>
