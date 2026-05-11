@@ -283,19 +283,36 @@
     }
 
     // ══════════════════════════════════════════════
-    // SCREEN 1 — Platform grid + Upload / Waitlist
-    // WhatsApp: selected by default, shows upload flow
-    // Coming soon: shows waitlist panel
-    // Other: shows "what platform?" + email
+    // SCREEN 1 — Platform picker (WhatsApp / iMessage)
     // ══════════════════════════════════════════════
-    const ALL_PLATFORMS = [
-      { id:"whatsapp",  label:"WhatsApp",      emoji:"💬", status:"ready" },
-      { id:"imessage",  label:"iMessage",      emoji:"🍎", status:"ready" },
-      { id:"telegram",  label:"Telegram",      emoji:"✈️", status:"soon"  },
-      { id:"discord",   label:"Discord",       emoji:"🎮", status:"soon"  },
-      { id:"signal",    label:"Signal",        emoji:"🔒", status:"soon"  },
-      { id:"other",     label:"Other",         emoji:"💬", status:"soon"  },
+
+    /* Coming-soon platforms (Telegram, Discord, Signal, Other) and their
+       waitlist email-collection UI have been removed from the visible page.
+       The data and logic are preserved below in case they need to be restored.
+
+    const COMING_SOON_PLATFORMS = [
+      { id:"telegram", label:"Telegram", emoji:"✈️" },
+      { id:"discord",  label:"Discord",  emoji:"🎮" },
+      { id:"signal",   label:"Signal",   emoji:"🔒" },
+      { id:"other",    label:"Other",    emoji:"💬" },
     ];
+
+    // Waitlist state (used when coming-soon platforms are shown):
+    // const [waitlistChecked, setWaitlistChecked] = useState({});
+    // const [waitlistEmail, setWaitlistEmail]     = useState("");
+    // const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+    // const [otherPlatformText, setOtherPlatformText] = useState("");
+
+    // function toggleWaitlistPlatform(id) { setWaitlistChecked(prev => ({ ...prev, [id]: !prev[id] })); }
+    // function submitWaitlist() {
+    //   if (!waitlistEmail.trim() || !waitlistEmail.includes("@")) return;
+    //   const selected = COMING_SOON_PLATFORMS.filter(p => waitlistChecked[p.id] && p.id !== "other").map(p => p.label);
+    //   const payload = { email: waitlistEmail.trim(), platforms: selected };
+    //   if (waitlistChecked["other"] && otherPlatformText.trim()) payload.otherPlatform = otherPlatformText.trim();
+    //   console.log("Waitlist signup:", payload);
+    //   setWaitlistSubmitted(true);
+    // }
+    */
 
     function Screen1({ data, setData, onNext }) {
       const [selectedPlatform, setSelectedPlatform] = useState("whatsapp");
@@ -304,42 +321,9 @@
       const [error, setError] = useState("");
       const fileRef = useRef();
 
-      // Waitlist state
-      const [waitlistChecked, setWaitlistChecked] = useState({});
-      const [waitlistEmail, setWaitlistEmail] = useState("");
-      const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
-      const [otherPlatformText, setOtherPlatformText] = useState("");
-
       function selectPlatform(id) {
-        if (id === "imessage") {
-          window.open("/imessage.html", "_blank");
-          return;
-        }
         setSelectedPlatform(id);
         setError("");
-        setWaitlistSubmitted(false);
-        setWaitlistEmail("");
-        setOtherPlatformText("");
-        // pre-check the clicked platform in the multi-select
-        if (id !== "whatsapp") {
-          setWaitlistChecked(prev => ({ ...prev, [id]: true }));
-        }
-      }
-
-      function toggleWaitlistPlatform(id) {
-        setWaitlistChecked(prev => ({ ...prev, [id]: !prev[id] }));
-      }
-
-      function submitWaitlist() {
-        if (!waitlistEmail.trim() || !waitlistEmail.includes("@")) return;
-        const nonWhatsapp = ALL_PLATFORMS.filter(p => p.status === "soon");
-        const selected = nonWhatsapp.filter(p => waitlistChecked[p.id] && p.id !== "other").map(p => p.label);
-        const payload = { email: waitlistEmail.trim(), platforms: selected };
-        if (waitlistChecked["other"] && otherPlatformText.trim()) {
-          payload.otherPlatform = otherPlatformText.trim();
-        }
-        console.log("Waitlist signup:", payload);
-        setWaitlistSubmitted(true);
       }
 
       async function parseZip(f) {
@@ -380,59 +364,45 @@
       }
 
       function advance() {
-        if (selectedPlatform === "whatsapp") {
-          if (!data.file) { setError("Please upload your WhatsApp export to continue."); return; }
-          setData(d => ({ ...d, platform:"whatsapp" }));
-          onNext();
-        }
-        // For waitlist flows, Next button is replaced by the submit+thank-you state
+        if (!data.file) { setError("Please upload your WhatsApp export to continue."); return; }
+        setData(d => ({ ...d, platform:"whatsapp" }));
+        onNext();
       }
 
-      const clickedLabel = ALL_PLATFORMS.find(p => p.id === selectedPlatform)?.label || "";
+      const PLATFORMS = [
+        { id:"whatsapp", label:"WhatsApp", sub:"Export from the app in seconds" },
+        { id:"imessage", label:"iMessage", sub:"Run a quick script on your Mac" },
+      ];
 
       return (
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Platform</div>
           <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Where does your group chat live?</h2>
-          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Start with WhatsApp. More platforms are on the way — tell us which ones matter to you.</p>
+          <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Choose your platform to get started.</p>
 
-          {/* 2×3 platform grid */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:32 }}>
-            {ALL_PLATFORMS.map(p => {
+          {/* Two-up platform picker */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:32 }}>
+            {PLATFORMS.map(p => {
               const isSelected = selectedPlatform === p.id;
-              const isReady = p.status === "ready";
               return (
                 <button key={p.id} onClick={() => selectPlatform(p.id)} style={{
                   display:"flex", flexDirection:"column", alignItems:"flex-start",
-                  padding: isReady ? "20px 22px" : "14px 16px",
-                  gap: isReady ? 9 : 5,
-                  border: isSelected ? "2px solid #111" : isReady ? "1px solid #ccc" : "1px solid #efefef",
+                  padding:"22px 22px", gap:8,
+                  border: isSelected ? "2px solid #111" : "1px solid #ddd",
                   background: isSelected ? "#fafafa" : "#fff",
                   cursor:"pointer", textAlign:"left", transition:"all 0.15s",
                   fontFamily:"'DM Sans',sans-serif",
-                  opacity: isReady ? 1 : 0.5,
                 }}>
-                  <div style={{ fontSize: isReady ? 26 : 20 }}>{p.emoji}</div>
-                  <div style={{ fontSize: isReady ? 15 : 13, fontWeight: isReady ? 500 : 400, color:"#111" }}>{p.label}</div>
-                  <div style={{
-                    fontSize:10, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase",
-                    background: isReady ? "#111" : "#f0f0f0",
-                    color: isReady ? "#fff" : "#aaa",
-                    padding:"2px 7px",
-                  }}>
-                    {isReady ? "Ready now" : p.id === "other" ? "Tell us" : "Coming soon"}
-                  </div>
+                  <div style={{ fontSize:16, fontWeight:500, color:"#111" }}>{p.label}</div>
+                  <div style={{ fontSize:12, fontWeight:300, color:"#aaa", lineHeight:1.5 }}>{p.sub}</div>
                 </button>
               );
             })}
           </div>
 
-          {/* Panel below grid — changes based on selected platform */}
-
           {/* WhatsApp panel */}
           {selectedPlatform === "whatsapp" && (
             <div>
-              {/* How-to instructions */}
               <div style={{ background:"#fafafa", border:"1px solid #f0f0f0", padding:"16px 20px", marginBottom:20 }}>
                 <div style={{ fontSize:11, fontWeight:500, color:"#aaa", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:10 }}>How to export</div>
                 {[
@@ -449,7 +419,6 @@
                 ))}
               </div>
 
-              {/* Drop zone */}
               <div
                 onDragOver={e => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
@@ -481,7 +450,6 @@
               </div>
               <ErrorMsg msg={error} />
 
-              {/* Next button — only shown after successful upload */}
               {data.file && !parsing && (
                 <div style={{ display:"flex", gap:12, marginTop:32, paddingTop:24, borderTop:"1px solid #f0f0f0" }}>
                   <Btn onClick={advance} style={{ marginLeft:"auto" }}>Next →</Btn>
@@ -490,61 +458,18 @@
             </div>
           )}
 
-          {/* Unified waitlist panel — shown for any non-WhatsApp platform */}
-          {selectedPlatform !== "whatsapp" && (
-            <div style={{ border:"1px solid #e0e0e0", padding:"24px 20px", background:"#fafafa" }}>
-              {waitlistSubmitted ? (
-                <div style={{ textAlign:"center", padding:"8px 0" }}>
-                  <div style={{ fontSize:28, marginBottom:12 }}>✓</div>
-                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#111", marginBottom:8 }}>You're on the list.</div>
-                  <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.7, marginBottom:20 }}>We'll email you the moment your platforms are ready.</div>
-                  <a href="#" onClick={e => { e.preventDefault(); selectPlatform("whatsapp"); }} style={{ fontSize:13, color:"#111", fontWeight:500, textDecoration:"underline", fontFamily:"'DM Sans',sans-serif" }}>
-                    Start with WhatsApp instead →
-                  </a>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ fontSize:14, fontWeight:500, color:"#111", marginBottom:6 }}>
-                    We're building support for more platforms.
-                  </div>
-                  <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.6, marginBottom:20 }}>
-                    Leave your email and we'll notify you the moment yours is ready.
-                  </div>
-
-                  {/* Multi-select checkboxes — all non-WhatsApp platforms */}
-                  <div style={{ marginBottom: waitlistChecked["other"] ? 12 : 16 }}>
-                    <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.15em", textTransform:"uppercase", color:"#aaa", marginBottom:10 }}>Which platforms do you use?</div>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                      {ALL_PLATFORMS.filter(p => p.id !== "whatsapp").map(p => (
-                        <label key={p.id} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", border: waitlistChecked[p.id] ? "1px solid #111" : "1px solid #e0e0e0", background: waitlistChecked[p.id] ? "#111" : "#fff", cursor:"pointer", transition:"all 0.1s" }}>
-                          <input type="checkbox" checked={!!waitlistChecked[p.id]} onChange={() => toggleWaitlistPlatform(p.id)} style={{ display:"none" }} />
-                          <span style={{ fontSize:13 }}>{p.emoji}</span>
-                          <span style={{ fontSize:12, fontWeight:500, color: waitlistChecked[p.id] ? "#fff" : "#555", fontFamily:"'DM Sans',sans-serif" }}>{p.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* "Other" text field — only visible when Other checkbox is checked */}
-                  {waitlistChecked["other"] && (
-                    <div style={{ marginBottom:16 }}>
-                      <input type="text" value={otherPlatformText} onChange={e => setOtherPlatformText(e.target.value)}
-                        placeholder="Which platform? e.g. GroupMe, Line, WeChat…"
-                        style={{ ...inputStyle }} />
-                    </div>
-                  )}
-
-                  <input type="email" value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    style={{ width:"100%", padding:"10px 14px", border:"1px solid #e0e0e0", fontSize:14, fontWeight:300, color:"#111", fontFamily:"'DM Sans',sans-serif", outline:"none", marginBottom:12 }} />
-
-                  <button onClick={submitWaitlist}
-                    disabled={!waitlistEmail.trim() || !waitlistEmail.includes("@")}
-                    style={{ width:"100%", padding:"12px 0", background: (!waitlistEmail.trim() || !waitlistEmail.includes("@")) ? "#ccc" : "#111", color:"#fff", border:"none", fontSize:13, fontWeight:500, cursor: (!waitlistEmail.trim() || !waitlistEmail.includes("@")) ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                    Notify me
-                  </button>
-                </div>
-              )}
+          {/* iMessage panel */}
+          {selectedPlatform === "imessage" && (
+            <div style={{ border:"1px solid #f0f0f0", padding:"20px 24px", background:"#fafafa" }}>
+              <div style={{ fontSize:14, fontWeight:400, color:"#333", marginBottom:10, lineHeight:1.6 }}>
+                iMessage doesn't have a built-in export — you'll run a small script on your Mac first. It takes about two minutes and drops a file on your Desktop that you upload here.
+              </div>
+              <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.7, marginBottom:20 }}>
+                Full step-by-step instructions, the script download, and the upload drop zone are all on the next page.
+              </div>
+              <a href="/imessage.html" style={{ display:"inline-block", background:"#111", color:"#fff", fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:500, padding:"11px 20px", textDecoration:"none", letterSpacing:"0.01em" }}>
+                Get the iMessage export script →
+              </a>
             </div>
           )}
         </div>
