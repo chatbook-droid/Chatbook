@@ -150,6 +150,24 @@
       return { participants: parseImessageParticipants(text), chatText: text, contacts };
     }
 
+    // WhatsApp zip helper — used by the IndexedDB load in Builder when
+    // the user arrives from whatsapp.html with ?platform=whatsapp
+    async function parseWhatsappZip(file) {
+      const zip = await JSZip.loadAsync(file);
+      let chatEntry = null;
+      zip.forEach((path, entry) => {
+        if (!entry.dir && path.replace(/.*\//, "") === "_chat.txt" && !chatEntry) chatEntry = entry;
+      });
+      if (!chatEntry) {
+        zip.forEach((path, entry) => {
+          if (!entry.dir && path.endsWith(".txt") && !chatEntry) chatEntry = entry;
+        });
+      }
+      if (!chatEntry) throw new Error("No _chat.txt found");
+      const text = await chatEntry.async("string");
+      return { participants: parseParticipants(text), chatText: text };
+    }
+
     // ─────────────────────────────────────────────
     // BUG 2 FIX: AddrForm defined at module level so
     // React never unmounts it during Screen7 re-renders
@@ -315,60 +333,6 @@
     */
 
     function Screen1({ data, setData, onNext }) {
-      const [selectedPlatform, setSelectedPlatform] = useState("whatsapp");
-      const [parsing, setParsing] = useState(false);
-      const [dragOver, setDragOver] = useState(false);
-      const [error, setError] = useState("");
-      const fileRef = useRef();
-
-      function selectPlatform(id) {
-        setSelectedPlatform(id);
-        setError("");
-      }
-
-      async function parseZip(f) {
-        setParsing(true);
-        setError("");
-        try {
-          const zip = await JSZip.loadAsync(f);
-          let chatEntry = null;
-          zip.forEach((path, entry) => {
-            if (!entry.dir && path.replace(/.*\//, "") === "_chat.txt" && !chatEntry) chatEntry = entry;
-          });
-          if (!chatEntry) {
-            zip.forEach((path, entry) => {
-              if (!entry.dir && path.endsWith(".txt") && !chatEntry) chatEntry = entry;
-            });
-          }
-          if (!chatEntry) throw new Error("No _chat.txt found in the zip. Please export your WhatsApp chat and try again.");
-          const text = await chatEntry.async("string");
-          const names = parseParticipants(text);
-          if (names.length === 0) throw new Error("Could not find any participant names. Make sure the export includes message history.");
-          setData(d => ({ ...d, platform:"whatsapp", file: f, participants: names, chatText: text }));
-        } catch(e) {
-          setError(e.message);
-        }
-        setParsing(false);
-      }
-
-      function handleFile(f) {
-        if (!f) return;
-        if (f.size > 500 * 1024 * 1024) { setError("File must be under 500MB."); return; }
-        if (!f.name.endsWith(".zip")) { setError("Please upload a .zip file."); return; }
-        parseZip(f);
-      }
-
-      function handleDrop(e) {
-        e.preventDefault(); setDragOver(false);
-        handleFile(e.dataTransfer.files[0]);
-      }
-
-      function advance() {
-        if (!data.file) { setError("Please upload your WhatsApp export to continue."); return; }
-        setData(d => ({ ...d, platform:"whatsapp" }));
-        onNext();
-      }
-
       const PLATFORMS = [
         { id:"whatsapp", label:"WhatsApp", sub:"Export from the app in seconds" },
         { id:"imessage", label:"iMessage", sub:"Run a quick script on your Mac" },
@@ -380,98 +344,23 @@
           <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>Where does your group chat live?</h2>
           <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>Choose your platform to get started.</p>
 
-          {/* Two-up platform picker */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:32 }}>
-            {PLATFORMS.map(p => {
-              const isSelected = selectedPlatform === p.id;
-              return (
-                <button key={p.id} onClick={() => selectPlatform(p.id)} style={{
-                  display:"flex", flexDirection:"column", alignItems:"flex-start",
-                  padding:"22px 22px", gap:8,
-                  border: isSelected ? "2px solid #111" : "1px solid #ddd",
-                  background: isSelected ? "#fafafa" : "#fff",
-                  cursor:"pointer", textAlign:"left", transition:"all 0.15s",
-                  fontFamily:"'DM Sans',sans-serif",
-                }}>
-                  <div style={{ fontSize:16, fontWeight:500, color:"#111" }}>{p.label}</div>
-                  <div style={{ fontSize:12, fontWeight:300, color:"#aaa", lineHeight:1.5 }}>{p.sub}</div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* WhatsApp panel */}
-          {selectedPlatform === "whatsapp" && (
-            <div>
-              <div style={{ background:"#fafafa", border:"1px solid #f0f0f0", padding:"16px 20px", marginBottom:20 }}>
-                <div style={{ fontSize:11, fontWeight:500, color:"#aaa", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:10 }}>How to export</div>
-                {[
-                  "Open WhatsApp and go to the group chat.",
-                  "Tap the group name at the top to open group info.",
-                  "Scroll down and tap Export Chat.",
-                  "Choose With Media to include photos and videos.",
-                  "Save or share the .zip file, then upload it below.",
-                ].map((s,i) => (
-                  <div key={i} style={{ display:"flex", gap:10, marginBottom:6 }}>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:13, color:"#ddd", fontWeight:700, flexShrink:0, lineHeight:1.6 }}>{i+1}</div>
-                    <div style={{ fontSize:13, fontWeight:300, color:"#666", lineHeight:1.6 }}>{s}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div
-                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-                onClick={() => fileRef.current.click()}
-                style={{ border:dragOver?"2px solid #111":"2px dashed #ddd", padding:"32px 24px", textAlign:"center", cursor:"pointer", background:dragOver?"#f5f5f5":"#fff", transition:"all 0.15s", marginBottom:8 }}
-              >
-                <input ref={fileRef} type="file" accept=".zip" style={{ display:"none" }} onChange={e => handleFile(e.target.files[0])} />
-                {parsing ? (
-                  <div>
-                    <div style={{ width:22, height:22, border:"2px solid #111", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite", margin:"0 auto 10px" }} />
-                    <div style={{ fontSize:13, color:"#888" }}>Parsing your chat…</div>
-                  </div>
-                ) : data.file ? (
-                  <div>
-                    <div style={{ fontSize:22, marginBottom:6 }}>✓</div>
-                    <div style={{ fontSize:14, fontWeight:500, color:"#111", marginBottom:4 }}>{data.file.name}</div>
-                    <div style={{ fontSize:12, color:"#aaa" }}>
-                      {data.participants?.length > 0 ? `Found ${data.participants.length} participants` : "File ready"}{" · "}Click to replace
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <div style={{ fontSize:28, marginBottom:8 }}>📁</div>
-                    <div style={{ fontSize:14, fontWeight:400, color:"#555", marginBottom:4 }}>Drop your .zip file here</div>
-                    <div style={{ fontSize:12, color:"#bbb" }}>or click to browse · max 500MB</div>
-                  </div>
-                )}
-              </div>
-              <ErrorMsg msg={error} />
-
-              {data.file && !parsing && (
-                <div style={{ display:"flex", gap:12, marginTop:32, paddingTop:24, borderTop:"1px solid #f0f0f0" }}>
-                  <Btn onClick={advance} style={{ marginLeft:"auto" }}>Next →</Btn>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* iMessage panel */}
-          {selectedPlatform === "imessage" && (
-            <div style={{ border:"1px solid #f0f0f0", padding:"20px 24px", background:"#fafafa" }}>
-              <div style={{ fontSize:14, fontWeight:400, color:"#333", marginBottom:10, lineHeight:1.6 }}>
-                iMessage doesn't have a built-in export — you'll run a small script on your Mac first. It takes about two minutes and drops a file on your Desktop that you upload here.
-              </div>
-              <div style={{ fontSize:13, fontWeight:300, color:"#888", lineHeight:1.7, marginBottom:20 }}>
-                Full step-by-step instructions, the script download, and the upload drop zone are all on the next page.
-              </div>
-              <a href="/imessage.html" style={{ display:"inline-block", background:"#111", color:"#fff", fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:500, padding:"11px 20px", textDecoration:"none", letterSpacing:"0.01em" }}>
-                Get the iMessage export script →
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            {PLATFORMS.map(p => (
+              <a key={p.id} href={p.id === "whatsapp" ? "/whatsapp.html" : "/imessage.html"} style={{
+                display:"flex", flexDirection:"column", alignItems:"flex-start",
+                padding:"22px 22px", gap:8,
+                border:"1px solid #ddd",
+                background:"#fff",
+                textDecoration:"none", textAlign:"left", transition:"border-color 0.15s, background 0.15s",
+                fontFamily:"'DM Sans',sans-serif",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor="#111"; e.currentTarget.style.background="#fafafa"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor="#ddd"; e.currentTarget.style.background="#fff"; }}>
+                <div style={{ fontSize:16, fontWeight:500, color:"#111" }}>{p.label}</div>
+                <div style={{ fontSize:12, fontWeight:300, color:"#aaa", lineHeight:1.5 }}>{p.sub}</div>
               </a>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       );
     }
@@ -535,7 +424,7 @@
 
       function advance() {
         if (!name.trim()) { setError("Please enter a name for your book."); return; }
-        if (data.platform === "imessage" && !data.file) { setError("Please upload your Chatbook zip file."); return; }
+        if ((data.platform === "imessage" || data.platform === "whatsapp") && !data.file) { setError("Please upload your chat zip file."); return; }
         setData(d => ({ ...d, bookName:name.trim(), season }));
         onNext();
       }
@@ -1202,8 +1091,9 @@
       const _urlParams = new URLSearchParams(window.location.search);
       const _platformParam = _urlParams.get('platform');
       const _titleParam = _urlParams.get('title') || '';
-      const [step, setStep] = useState(_platformParam === 'imessage' ? 2 : 1);
-      const [data, setData] = useState(_platformParam === 'imessage' ? { platform: 'imessage', bookName: _titleParam } : {});
+      const _skipToStep2 = _platformParam === 'imessage' || _platformParam === 'whatsapp';
+      const [step, setStep] = useState(_skipToStep2 ? 2 : 1);
+      const [data, setData] = useState(_skipToStep2 ? { platform: _platformParam, bookName: _titleParam } : {});
       const [draft, setDraft] = useState(null); // non-null = show banner
       const TOTAL = 7;
 
@@ -1240,10 +1130,10 @@
         } catch(e) {}
       }, []);
 
-      // For iMessage flow: retrieve the file dropped on imessage.html from IndexedDB,
-      // then parse _chat.txt to extract participants and chatText.
+      // For iMessage and WhatsApp flows: retrieve the file dropped on the
+      // platform-specific page from IndexedDB, then parse it.
       useEffect(() => {
-        if (_platformParam !== 'imessage') return;
+        if (!_skipToStep2) return;
         try {
           const req = indexedDB.open('chatbook', 1);
           req.onsuccess = e => {
@@ -1255,9 +1145,14 @@
               const file = e.target.result;
               if (!file) return;
               try {
-                const { participants, chatText, contacts } = await parseImessageZip(file);
-                const extra = Object.keys(contacts).length ? { nicknames: contacts } : {};
-                setData(d => ({ ...d, file, participants, chatText, ...extra }));
+                if (_platformParam === 'imessage') {
+                  const { participants, chatText, contacts } = await parseImessageZip(file);
+                  const extra = Object.keys(contacts).length ? { nicknames: contacts } : {};
+                  setData(d => ({ ...d, file, participants, chatText, ...extra }));
+                } else {
+                  const { participants, chatText } = await parseWhatsappZip(file);
+                  setData(d => ({ ...d, file, participants, chatText }));
+                }
               } catch(err) {
                 setData(d => ({ ...d, file }));
               }
