@@ -371,7 +371,6 @@
     // ══════════════════════════════════════════════
     function Screen2({ data, setData, onBack, onNext }) {
       const [name, setName] = useState(data.bookName || "");
-      const [season, setSeason] = useState(data.season || 1);
       const [error, setError] = useState("");
       const fileRef = useRef();
 
@@ -425,7 +424,7 @@
       function advance() {
         if (!name.trim()) { setError("Please enter a name for your book."); return; }
         if ((data.platform === "imessage" || data.platform === "whatsapp") && !data.file) { setError("Please upload your chat zip file."); return; }
-        setData(d => ({ ...d, bookName:name.trim(), season }));
+        setData(d => ({ ...d, bookName:name.trim(), season:1 }));
         onNext();
       }
 
@@ -438,7 +437,7 @@
           {/* Live book preview — updates as user types */}
           <div style={{ marginBottom:36 }}>
             <Book cover={previewCover} spine={previewSpine} foilColor={previewFoil}
-              title={name || "Your Book"} season={season} dateRange={dateRange} />
+              title={name || "Your Book"} season={1} dateRange={dateRange} />
           </div>
 
           {data.platform === "imessage" && (
@@ -472,18 +471,6 @@
               onChange={e => { setName(e.target.value); setError(""); }}
               style={inputStyle} />
             <ErrorMsg msg={error} />
-          </div>
-
-          <div style={{ marginBottom:8 }}>
-            <FieldLabel>Season number</FieldLabel>
-            <input
-              type="number" min="1" max="99" value={season}
-              onChange={e => setSeason(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              style={{ ...inputStyle, width:80 }}
-            />
-            <div style={{ marginTop:8, fontSize:12, fontWeight:300, color:"#bbb", lineHeight:1.5 }}>
-              Most people start at Season 1. You can always come back for Season 2.
-            </div>
           </div>
 
           <NavBtns onBack={onBack} onNext={advance} />
