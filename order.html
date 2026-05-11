@@ -996,10 +996,22 @@
         setSubmitting(true);
         setError("");
 
+        // Read file bytes once — a File object's underlying stream is consumed by the
+        // first fetch, so subsequent uploads would send an empty body.  Reading into an
+        // ArrayBuffer and creating a fresh Blob per upload avoids that.
+        let fileBytes = null;
+        let fileName  = null;
+        let fileType  = null;
+        if (data.file) {
+          fileBytes = await data.file.arrayBuffer();
+          fileName  = data.file.name;
+          fileType  = data.file.type || "application/zip";
+        }
+
         // Build a FormData payload for a single season (or the whole chat if no season split)
         function buildFD(seasonOverride) {
           const fd = new FormData();
-          if (data.file) fd.append("file", data.file);
+          if (fileBytes) fd.append("file", new Blob([fileBytes], { type: fileType }), fileName);
           fd.append("group_name",       data.bookName || "");
           fd.append("customer_name",    primaryAddr.name);
           fd.append("customer_email",   data.proofEmail || "");
@@ -1048,9 +1060,9 @@
           const API = "https://aware-nature-production-7dda.up.railway.app";
           const ordersToSubmit = seasonsToOrder || [null]; // null = single-season flow
 
-          for (const s of ordersToSubmit) {
-            const res = await fetch(API + "/upload", { method: "POST", body: buildFD(s) });
-            if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
+          for (let i = 0; i < ordersToSubmit.length; i++) {
+            const res = await fetch(API + "/upload", { method: "POST", body: buildFD(ordersToSubmit[i]) });
+            if (!res.ok) throw new Error("Upload failed (" + res.status + ") for order " + (i + 1) + " of " + ordersToSubmit.length);
           }
 
           localStorage.removeItem("chatbook_order_draft");
