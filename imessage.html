@@ -59,20 +59,25 @@
     <div style="margin-bottom:40px; padding-bottom:40px; border-bottom:1px solid #f0f0f0;">
       <div style="font-family:'Playfair Display',serif; font-size:48px; font-weight:700; color:#f0f0f0; line-height:1; margin-bottom:12px;">3</div>
       <div style="font-size:16px; font-weight:500; color:#111; margin-bottom:10px;">Open Terminal and run it</div>
-      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888; margin-bottom:20px;">Open Terminal — search for it with <span style="font-family:monospace; font-size:13px; background:#f7f7f7; padding:1px 6px; border:1px solid #e8e8e8;">⌘ Space</span> then type "Terminal". Type the first command and press <strong style="font-weight:500; color:#999;">Enter</strong>, then type the second and press <strong style="font-weight:500; color:#999;">Enter</strong>:</p>
+      <p style="font-size:14px; font-weight:300; line-height:1.7; color:#888; margin-bottom:20px;">Open Terminal — search for it with <span style="font-family:monospace; font-size:13px; background:#f7f7f7; padding:1px 6px; border:1px solid #e8e8e8;">⌘ Space</span> then type "Terminal". Run each command one at a time — copy it, paste it in, press <strong style="font-weight:500; color:#999;">Enter</strong>, then do the next.</p>
 
-      <div style="background:#f7f7f7; border:1px solid #e8e8e8; padding:18px 20px; margin-bottom:14px;">
-        <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px;">
-          <span style="font-family:monospace; font-size:13px; color:#333;">cd ~/Downloads</span>
-          <span style="font-size:11px; color:#bbb; margin-left:16px; white-space:nowrap;">press Enter</span>
-        </div>
-        <div style="display:flex; align-items:baseline; justify-content:space-between;">
-          <span style="font-family:monospace; font-size:13px; color:#333;">python3 chatbook-imessage.py</span>
-          <span style="font-size:11px; color:#bbb; margin-left:16px; white-space:nowrap;">press Enter</span>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px; font-weight:500; letter-spacing:0.15em; text-transform:uppercase; color:#ccc; margin-bottom:6px;">Command 1</div>
+        <div style="background:#f7f7f7; border:1px solid #e8e8e8; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;">
+          <span id="cmd1" style="font-family:monospace; font-size:13px; color:#333;">cd ~/Downloads</span>
+          <button onclick="copyCmd('cmd1', this)" style="background:none; border:1px solid #ddd; padding:5px 12px; font-size:11px; font-weight:500; color:#888; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; margin-left:16px; transition:all 0.1s; flex-shrink:0;">Copy</button>
         </div>
       </div>
 
-      <p style="font-size:13px; font-weight:300; line-height:1.7; color:#bbb;">The script will show you a list of your group chats and ask a few questions — title, season number, and a nickname for each person. It takes about a minute to run, then saves a zip file to your Desktop.</p>
+      <div style="margin-bottom:18px;">
+        <div style="font-size:10px; font-weight:500; letter-spacing:0.15em; text-transform:uppercase; color:#ccc; margin-bottom:6px;">Command 2</div>
+        <div style="background:#f7f7f7; border:1px solid #e8e8e8; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;">
+          <span id="cmd2" style="font-family:monospace; font-size:13px; color:#333;">python3 chatbook-imessage.py</span>
+          <button onclick="copyCmd('cmd2', this)" style="background:none; border:1px solid #ddd; padding:5px 12px; font-size:11px; font-weight:500; color:#888; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; margin-left:16px; transition:all 0.1s; flex-shrink:0;">Copy</button>
+        </div>
+      </div>
+
+      <p style="font-size:13px; font-weight:300; line-height:1.7; color:#bbb;">The script will show you a list of your group chats. Pick one, and it saves a zip file to your Desktop — takes about a minute.</p>
 
       <div style="margin-top:18px; padding:14px 16px; background:#fafafa; border:1px solid #f0f0f0;">
         <div style="font-size:12px; font-weight:500; color:#aaa; margin-bottom:5px; letter-spacing:0.05em;">If Terminal asks for Full Disk Access</div>
@@ -115,6 +120,32 @@
   </div>
 
   <script>
+  function copyCmd(id, btn) {
+    var text = document.getElementById(id).textContent;
+    var orig = btn.textContent;
+    function flash() {
+      btn.textContent = 'Copied!';
+      btn.style.color = '#111';
+      btn.style.borderColor = '#111';
+      setTimeout(function () {
+        btn.textContent = orig;
+        btn.style.color = '#888';
+        btn.style.borderColor = '#ddd';
+      }, 1500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(flash).catch(function () {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta); flash();
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); flash();
+    }
+  }
+
   (function () {
     var dz       = document.getElementById('dz');
     var dzStatus = document.getElementById('dz-status');
