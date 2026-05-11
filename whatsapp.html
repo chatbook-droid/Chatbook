@@ -100,9 +100,12 @@
 
     function extractChatName(filename) {
       return filename
+        .replace(/^WhatsApp_Chat_with_/i, '')
+        .replace(/^WhatsApp_Chat_-_/i, '')
         .replace(/^WhatsApp Chat with\s+/i, '')
         .replace(/^WhatsApp Chat\s*[-–]\s*/i, '')
         .replace(/\.zip$/i, '')
+        .replace(/_/g, ' ')
         .trim();
     }
 
