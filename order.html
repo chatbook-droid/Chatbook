@@ -898,7 +898,12 @@
       const vibe = VIBES.find(v => v.id === data.vibeId) || VIBES[0];
       const foil = FOILS.find(f => f.id === data.foilId) || FOILS[0];
       const price = 89;
-      const total = price * qty;
+      // For multi-season orders the customer is ordering N separate volumes.
+      const parsedSeasons = data.selectedSeasons && data.selectedSeasons.length > 0
+        ? data.selectedSeasons
+        : null;
+      const nSeasons = parsedSeasons ? parsedSeasons.length : 1;
+      const total = price * qty * nSeasons;
 
       function addAddr() {
         if (multiAddrs.length < 10) setMultiAddrs(a => [...a, { name:"", phone:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" }]);
@@ -976,7 +981,7 @@
 
           if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
           localStorage.removeItem("chatbook_order_draft"); // Fix 1: clear draft on success
-          window.location.href = "https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00?prefilled_quantity=" + qty;
+          window.location.href = "https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00?prefilled_quantity=" + (qty * nSeasons);
         } catch(e) {
           setError("Something went wrong: " + e.message + ". Please try again or email hello@ourchatbook.com.");
           setSubmitting(false);
@@ -995,7 +1000,10 @@
             </div>
             {[
               ["Book name",   data.bookName || "—"],
-              ["Season",      `Season ${data.season || 1}`],
+              ...(parsedSeasons && nSeasons > 1
+                ? [["Seasons", `${nSeasons} volumes`]]
+                : [["Season",  `Season ${data.season || 1}`]]
+              ),
               ["Cover",       `${data.coverLabel || vibe.label} · ${data.foilLabel || foil.label} foil`],
               ["Format",      "8.5×11 hardcover, linen wrap"],
               ["Proof email", data.proofEmail || "—"],
@@ -1051,7 +1059,9 @@
 
           <div style={{ padding:"16px 20px", background:"#fafafa", border:"1px solid #f0f0f0", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <div>
-              <div style={{ fontSize:13, fontWeight:300, color:"#888" }}>{qty} × $89</div>
+              <div style={{ fontSize:13, fontWeight:300, color:"#888" }}>
+                {nSeasons > 1 ? `${qty} × ${nSeasons} seasons × $89` : `${qty} × $89`}
+              </div>
               <div style={{ fontSize:11, fontWeight:300, color:"#bbb", marginTop:2 }}>+ shipping calculated at checkout</div>
             </div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:"#111" }}>${total}</div>
@@ -1089,8 +1099,9 @@
     }
 
     // ══════════════════════════════════════════════
-    // ParseProgress overlay — shown while /full-parse
-    // runs in the background on the server
+    // ParseProgress overlay
+    //   phase="parsing"  → spinner while server works
+    //   phase="seasons"  → season review; user clicks Continue
     // ══════════════════════════════════════════════
     const PARSE_COPY = [
       "Reading every message…",
@@ -1101,30 +1112,107 @@
       "Almost there…",
     ];
 
-    function ParseProgress({ error, onRetry }) {
+    function fmtDateRange(from, to) {
+      function fmt(s) {
+        if (!s) return "";
+        const [y, m] = s.split("-");
+        return MONTH_NAMES[parseInt(m,10)-1] + " " + y;
+      }
+      const f = fmt(from), t = fmt(to);
+      if (!f && !t) return "";
+      if (f === t || !t) return f;
+      if (!f) return t;
+      return f + " – " + t;
+    }
+
+    function ParseProgress({ phase, seasons, error, onRetry, onContinue }) {
       const [msgIdx, setMsgIdx] = useState(0);
       useEffect(() => {
-        if (error) return;
+        if (phase !== "parsing" || error) return;
         const t = setInterval(() => setMsgIdx(i => (i + 1) % PARSE_COPY.length), 3500);
         return () => clearInterval(t);
-      }, [error]);
+      }, [phase, error]);
 
+      const overlayStyle = {
+        position:"fixed", inset:0, background:"rgba(255,255,255,0.97)", zIndex:1000,
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+        padding:32, textAlign:"center",
+      };
+
+      // ── Error state ───────────────────────────────────────────────────────
+      if (error) {
+        return (
+          <div style={overlayStyle}>
+            <div style={{ fontSize:15, fontWeight:500, color:"#c00", marginBottom:16 }}>Something went wrong</div>
+            <div style={{ fontSize:13, color:"#888", marginBottom:24, maxWidth:400, lineHeight:1.6 }}>{error}</div>
+            <Btn onClick={onRetry}>Try again</Btn>
+          </div>
+        );
+      }
+
+      // ── Season review ─────────────────────────────────────────────────────
+      if (phase === "seasons") {
+        const n = seasons.length;
+        const totalPrice = n * 89;
+        return (
+          <div style={{ ...overlayStyle, justifyContent:"flex-start", overflowY:"auto", paddingTop:64 }}>
+            <div style={{ maxWidth:520, width:"100%", textAlign:"left" }}>
+              <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>
+                Your chat is ready
+              </div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>
+                {n === 1 ? "One season detected." : `${n} seasons detected.`}
+              </h2>
+              <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>
+                {n === 1
+                  ? "Your chat fits in a single book. Page count and date range are confirmed below."
+                  : "Your chat is long enough to fill multiple books. Each season becomes its own hardcover volume."}
+              </p>
+
+              {/* Season cards */}
+              <div style={{ marginBottom:32 }}>
+                {seasons.map((s, i) => (
+                  <div key={s.season} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderBottom:"1px solid #f0f0f0" }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:500, color:"#111", marginBottom:3 }}>
+                        Season {s.season}
+                      </div>
+                      <div style={{ fontSize:12, fontWeight:300, color:"#aaa" }}>
+                        {fmtDateRange(s.date_from, s.date_to)}
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:13, fontWeight:400, color:"#555" }}>
+                        {s.page_count ? `${s.page_count} pages` : "—"}
+                      </div>
+                      <div style={{ fontSize:12, fontWeight:300, color:"#aaa" }}>$89 / copy</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {n > 1 && (
+                <div style={{ padding:"14px 0", marginBottom:32, borderTop:"1px solid #f0f0f0", display:"flex", justifyContent:"space-between" }}>
+                  <div style={{ fontSize:13, fontWeight:300, color:"#888" }}>{n} seasons × $89 / copy</div>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#111" }}>${totalPrice} / set</div>
+                </div>
+              )}
+
+              <Btn onClick={onContinue} style={{ width:"100%" }}>
+                Continue to cover design →
+              </Btn>
+            </div>
+          </div>
+        );
+      }
+
+      // ── Spinner (parsing) ─────────────────────────────────────────────────
       return (
-        <div style={{ position:"fixed", inset:0, background:"rgba(255,255,255,0.97)", zIndex:1000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32, textAlign:"center" }}>
-          {error ? (
-            <>
-              <div style={{ fontSize:15, fontWeight:500, color:"#c00", marginBottom:16 }}>Something went wrong</div>
-              <div style={{ fontSize:13, color:"#888", marginBottom:24, maxWidth:400, lineHeight:1.6 }}>{error}</div>
-              <Btn onClick={onRetry}>Try again</Btn>
-            </>
-          ) : (
-            <>
-              <div style={{ width:36, height:36, border:"3px solid #111", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", marginBottom:24 }} />
-              <div style={{ fontSize:15, fontWeight:500, color:"#111", marginBottom:8 }}>Analyzing your chat…</div>
-              <div style={{ fontSize:13, color:"#aaa", transition:"opacity 0.3s", minHeight:20 }}>{PARSE_COPY[msgIdx]}</div>
-              <div style={{ marginTop:16, fontSize:11, color:"#ddd" }}>This usually takes 2–5 minutes</div>
-            </>
-          )}
+        <div style={overlayStyle}>
+          <div style={{ width:36, height:36, border:"3px solid #111", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", marginBottom:24 }} />
+          <div style={{ fontSize:15, fontWeight:500, color:"#111", marginBottom:8 }}>Analyzing your chat…</div>
+          <div style={{ fontSize:13, color:"#aaa", transition:"opacity 0.3s", minHeight:20 }}>{PARSE_COPY[msgIdx]}</div>
+          <div style={{ marginTop:16, fontSize:11, color:"#ddd" }}>This usually takes 2–5 minutes</div>
         </div>
       );
     }
@@ -1144,7 +1232,8 @@
       const [step, setStep] = useState(_skipToStep2 ? 2 : 1);
       const [data, setData] = useState(_skipToStep2 ? { platform: _platformParam, bookName: _titleParam } : {});
       const [draft, setDraft] = useState(null); // non-null = show banner
-      const [parsing, setParsing] = useState(false);
+      // parsePhase: null = no overlay | "parsing" = spinner | "seasons" = season review
+      const [parsePhase, setParsePhase] = useState(null);
       const [parseError, setParseError] = useState("");
       const TOTAL = 7;
 
@@ -1265,23 +1354,22 @@
               // Persist across navigation / page reloads
               try { sessionStorage.setItem('chatbook_parsed_session', JSON.stringify(sessionState)); } catch(_) {}
               setData(d => ({ ...d, ...sessionState }));
-              setParsing(false);
-              next();
+              // Switch to season-review phase — user must click Continue to advance
+              setParsePhase("seasons");
               return;
             }
             if (sess.status === "error") {
               setParseError("Parse failed: " + (sess.parse_error || "Unknown error. Please try again."));
-              setParsing(false);
+              // Keep phase="parsing" so the overlay stays open to show the error
               return;
             }
           } catch(_) { /* transient — keep polling */ }
         }
         setParseError("Parse timed out. Please try again.");
-        setParsing(false);
       }
 
       async function startFullParse(file, groupName) {
-        setParsing(true);
+        setParsePhase("parsing");
         setParseError("");
         const fd = new FormData();
         fd.append("file", file);
@@ -1294,7 +1382,7 @@
           await pollSession(session_id);
         } catch(e) {
           setParseError("Upload failed: " + e.message + ". Please try again.");
-          setParsing(false);
+          // Keep overlay open (phase still "parsing") so error is visible
         }
       }
 
@@ -1310,10 +1398,13 @@
 
       return (
         <div style={{ background:"#fff", minHeight:"100vh", fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:"#111" }}>
-          {parsing && (
+          {parsePhase && (
             <ParseProgress
+              phase={parsePhase}
+              seasons={data.sessionSeasons || []}
               error={parseError}
-              onRetry={() => { setParseError(""); setParsing(false); }}
+              onRetry={() => { setParseError(""); setParsePhase(null); }}
+              onContinue={() => { setParsePhase(null); next(); }}
             />
           )}
           <Nav />
