@@ -246,6 +246,9 @@
       dz.style.display = 'none';
       showOverlay();
 
+      // Clear any previous session so a new upload always starts fresh
+      try { sessionStorage.removeItem('chatbook_parsed_session'); } catch(e) {}
+
       var chatName    = extractChatName(file.name);
       var redirectUrl = '/order.html?platform=imessage&title=' + encodeURIComponent(chatName);
 
@@ -258,26 +261,35 @@
           .then(function (r) { return r.ok ? r.json() : null; })
           .catch(function ()  { return null; }),
       ]).then(function (results) {
-        clearInterval(copyTimer);
         var parseResult = results[1];
 
         if (parseResult && parseResult.status === 'too_short') {
+          clearInterval(copyTimer);
           overlay.style.display = 'none';
           tooShort.style.display = 'flex';
           return;
         }
 
-        if (parseResult && (parseResult.status === 'one_season' || parseResult.status === 'multiple_seasons')) {
-          storeInDB('pre_parse_result', parseResult).then(function () {
-            window.location.href = redirectUrl;
-          }).catch(function () {
-            window.location.href = redirectUrl;
-          });
-        } else {
-          window.location.href = redirectUrl;
-        }
+        // Start the full parse on the server — get session_id, store it, redirect.
+        // The wizard polls for status; parse runs in the background.
+        var fd2 = new FormData();
+        fd2.append('file', file);
+        fd2.append('group_name', chatName);
+        fd2.append('platform', 'imessage');
+
+        fetch(API + '/full-parse', { method: 'POST', body: fd2 })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .catch(function ()  { return null; })
+          .then(function (fullParseResult) {
+            var session_id = fullParseResult && fullParseResult.session_id;
+            var storePromise = session_id
+              ? storeInDB('chatbook_session', { session_id: session_id })
+              : Promise.resolve();
+            return storePromise;
+          })
+          .then(function () { window.location.href = redirectUrl; })
+          .catch(function () { window.location.href = redirectUrl; });
       }).catch(function () {
-        clearInterval(copyTimer);
         window.location.href = redirectUrl;
       });
     }
