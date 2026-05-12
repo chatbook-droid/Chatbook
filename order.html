@@ -894,15 +894,22 @@
       const [consent, setConsent] = useState(false);
       const [submitting, setSubmitting] = useState(false);
       const [error, setError] = useState("");
+      const [addonChecked, setAddonChecked] = useState({});
 
       const vibe = VIBES.find(v => v.id === data.vibeId) || VIBES[0];
       const foil = FOILS.find(f => f.id === data.foilId) || FOILS[0];
       const price = 89;
-      // For multi-season orders the customer is ordering N separate volumes.
-      const parsedSeasons = data.selectedSeasons && data.selectedSeasons.length > 0
+
+      // Compute effective seasons: base (Season 1) + any checked add-ons
+      const allSessionSeasons = data.sessionSeasons || [];
+      const baseSeasons = data.selectedSeasons && data.selectedSeasons.length > 0
         ? data.selectedSeasons
-        : null;
-      const nSeasons = parsedSeasons ? parsedSeasons.length : 1;
+        : (allSessionSeasons.length > 0 ? [allSessionSeasons[0]] : null);
+      const baseSeasonNums = new Set((baseSeasons || []).map(s => s.season));
+      const addonAvailable = allSessionSeasons.filter(s => !baseSeasonNums.has(s.season));
+      const checkedAddons = addonAvailable.filter(s => addonChecked[s.season]);
+      const effectiveSeasons = baseSeasons ? [...baseSeasons, ...checkedAddons] : checkedAddons;
+      const nSeasons = effectiveSeasons.length || 1;
       const total = price * qty * nSeasons;
 
       function addAddr() {
@@ -930,11 +937,9 @@
             fd.append("file", data.file);
           }
 
-          // Build seasons array.
-          // data.selectedSeasons: set from session data (real page counts + date ranges).
-          // Fall back to single-season using wizard date fields for legacy uploads.
-          const seasons = (data.selectedSeasons && data.selectedSeasons.length > 0)
-            ? data.selectedSeasons.map((s, i) => ({
+          // Build seasons array — uses effective seasons (base Season 1 + checked add-ons).
+          const seasons = effectiveSeasons.length > 0
+            ? effectiveSeasons.map((s, i) => ({
                 season:    s.season || i + 1,
                 date_from: s.date_from || s.dateFrom || "",
                 date_to:   s.date_to   || s.dateTo   || "",
@@ -1000,9 +1005,9 @@
             </div>
             {[
               ["Book name",   data.bookName || "—"],
-              ...(parsedSeasons && nSeasons > 1
+              ...(nSeasons > 1
                 ? [["Seasons", `${nSeasons} volumes`]]
-                : [["Season",  `Season ${data.season || 1}`]]
+                : [["Season",  "Season 1"]]
               ),
               ["Cover",       `${data.coverLabel || vibe.label} · ${data.foilLabel || foil.label} foil`],
               ["Format",      "8.5×11 hardcover, linen wrap"],
@@ -1025,6 +1030,30 @@
               <span style={{ fontSize:13, color:"#aaa", marginLeft:8 }}>max 10</span>
             </div>
           </div>
+
+          {addonAvailable.length > 0 && (
+            <div style={{ marginBottom:24 }}>
+              <FieldLabel>Add more seasons</FieldLabel>
+              <p style={{ fontSize:13, fontWeight:300, color:"#aaa", marginBottom:12, lineHeight:1.6 }}>
+                Your chat spans {allSessionSeasons.length} seasons. You're starting with Season 1 — add more volumes below.
+              </p>
+              {addonAvailable.map(s => (
+                <label key={s.season} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid #f0f0f0", cursor:"pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={!!addonChecked[s.season]}
+                    onChange={e => setAddonChecked(prev => ({ ...prev, [s.season]: e.target.checked }))}
+                    style={{ width:16, height:16, flexShrink:0, cursor:"pointer" }}
+                  />
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:500, color:"#111" }}>Season {s.season}</div>
+                    <div style={{ fontSize:12, fontWeight:300, color:"#aaa" }}>{fmtDateRange(s.date_from, s.date_to)}</div>
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:400, color:"#555", flexShrink:0 }}>+$89 / copy</div>
+                </label>
+              ))}
+            </div>
+          )}
 
           <div style={{ marginBottom:20 }}>
             <FieldLabel>Shipping</FieldLabel>
@@ -1150,10 +1179,9 @@
         );
       }
 
-      // ── Season review ─────────────────────────────────────────────────────
+      // ── Season review (informational — no prices) ────────────────────────
       if (phase === "seasons") {
         const n = seasons.length;
-        const totalPrice = n * 89;
         return (
           <div style={{ ...overlayStyle, justifyContent:"flex-start", overflowY:"auto", paddingTop:64 }}>
             <div style={{ maxWidth:520, width:"100%", textAlign:"left" }}>
@@ -1161,45 +1189,29 @@
                 Your chat is ready
               </div>
               <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:8, lineHeight:1.2 }}>
-                {n === 1 ? "One season detected." : `${n} seasons detected.`}
+                {n === 1 ? "Your chat fits in one book." : `Your chat fills ${n} books.`}
               </h2>
               <p style={{ fontSize:14, fontWeight:300, color:"#888", marginBottom:32, lineHeight:1.7 }}>
-                {n === 1
-                  ? "Your chat fits in a single book. Page count and date range are confirmed below."
-                  : "Your chat is long enough to fill multiple books. Each season becomes its own hardcover volume."}
+                {n === 1 ? "Page count and date range are confirmed below." : "Here's how we've organized it."}
               </p>
 
-              {/* Season cards */}
-              <div style={{ marginBottom:32 }}>
-                {seasons.map((s, i) => (
+              {/* Season list — no prices */}
+              <div style={{ marginBottom:40 }}>
+                {seasons.map((s) => (
                   <div key={s.season} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderBottom:"1px solid #f0f0f0" }}>
                     <div>
-                      <div style={{ fontSize:13, fontWeight:500, color:"#111", marginBottom:3 }}>
-                        Season {s.season}
-                      </div>
-                      <div style={{ fontSize:12, fontWeight:300, color:"#aaa" }}>
-                        {fmtDateRange(s.date_from, s.date_to)}
-                      </div>
+                      <div style={{ fontSize:13, fontWeight:500, color:"#111", marginBottom:3 }}>Season {s.season}</div>
+                      <div style={{ fontSize:12, fontWeight:300, color:"#aaa" }}>{fmtDateRange(s.date_from, s.date_to)}</div>
                     </div>
-                    <div style={{ textAlign:"right" }}>
-                      <div style={{ fontSize:13, fontWeight:400, color:"#555" }}>
-                        {s.page_count ? `${s.page_count} pages` : "—"}
-                      </div>
-                      <div style={{ fontSize:12, fontWeight:300, color:"#aaa" }}>$89 / copy</div>
+                    <div style={{ fontSize:13, fontWeight:400, color:"#555" }}>
+                      {s.page_count ? `${s.page_count} pages` : "—"}
                     </div>
                   </div>
                 ))}
               </div>
 
-              {n > 1 && (
-                <div style={{ padding:"14px 0", marginBottom:32, borderTop:"1px solid #f0f0f0", display:"flex", justifyContent:"space-between" }}>
-                  <div style={{ fontSize:13, fontWeight:300, color:"#888" }}>{n} seasons × $89 / copy</div>
-                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#111" }}>${totalPrice} / set</div>
-                </div>
-              )}
-
-              <Btn onClick={onContinue} style={{ width:"100%" }}>
-                Continue to cover design →
+              <Btn onClick={() => onContinue(seasons[0])} style={{ width:"100%" }}>
+                Start with Season 1 →
               </Btn>
             </div>
           </div>
@@ -1270,35 +1282,53 @@
         } catch(e) {}
       }, []);
 
-      // On mount: restore session state from sessionStorage so that navigating
-      // back (browser back or whatsapp.html → order.html) doesn't lose a
-      // completed parse. Only applies when arriving via the platform flow.
+      // On mount: restore session + load file.
+      // 1. Check sessionStorage for a completed parse (survives back-nav).
+      // 2. Check IndexedDB for session_id stored by the platform page.
+      // 3. Load the zip file from IndexedDB for client-side participant parsing.
       useEffect(() => {
         if (!_skipToStep2) return;
+
+        // Synchronously check sessionStorage for a completed session
+        let hasCompletedSession = false;
         try {
           const raw = sessionStorage.getItem('chatbook_parsed_session');
           if (raw) {
-            const sessionState = JSON.parse(raw);
-            if (sessionState && sessionState.sessionId) {
-              setData(d => ({ ...d, ...sessionState }));
+            const ss = JSON.parse(raw);
+            if (ss && ss.sessionId) {
+              setData(d => ({ ...d, ...ss }));
+              setParsePhase("seasons");
+              hasCompletedSession = true;
             }
           }
         } catch(e) {}
-      }, []);
 
-      // For iMessage and WhatsApp flows: retrieve the file dropped on the
-      // platform-specific page from IndexedDB, then parse it.
-      useEffect(() => {
-        if (!_skipToStep2) return;
+        // Open IndexedDB for session_id and file
         try {
           const req = indexedDB.open('chatbook', 1);
           req.onsuccess = e => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('files')) return;
             const tx = db.transaction('files', 'readonly');
-            const getReq = tx.objectStore('files').get('pending');
-            getReq.onsuccess = async e => {
-              const file = e.target.result;
+            const store = tx.objectStore('files');
+
+            // Read session_id stored by the platform page on file drop
+            const sessionReq = store.get('chatbook_session');
+            sessionReq.onsuccess = se => {
+              const session = se.target.result;
+              if (session && session.session_id) {
+                setData(d => ({ ...d, sessionId: session.session_id }));
+                if (!hasCompletedSession) {
+                  setParsePhase("parsing");
+                  pollSession(session.session_id);
+                }
+              }
+            };
+
+            // Read zip file for client-side participant / chatText extraction
+            const fileReq = store.get('pending');
+            fileReq.onsuccess = async fe => {
+              const file = fe.target.result;
               if (!file) return;
               try {
                 if (_platformParam === 'imessage') {
@@ -1404,7 +1434,7 @@
               seasons={data.sessionSeasons || []}
               error={parseError}
               onRetry={() => { setParseError(""); setParsePhase(null); }}
-              onContinue={() => { setParsePhase(null); next(); }}
+              onContinue={(firstSeason) => { if (firstSeason) setData(d => ({ ...d, selectedSeasons: [firstSeason] })); setParsePhase(null); next(); }}
             />
           )}
           <Nav />
