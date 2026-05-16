@@ -937,21 +937,21 @@
         setSubmitting(true);
         setError("");
 
-        // Test mode: skip real upload and simulate success
-        if (_isTestMode) {
-          setTestDone(true);
-          setSubmitting(false);
-          return;
-        }
-
         try {
           const fd = new FormData();
 
-          // Session-based: send session_id (no file re-upload needed).
-          // Legacy: attach the zip file directly.
-          if (data.sessionId) {
+          if (_isTestMode) {
+            // Create a real server-side session so the order lands in the dashboard
+            // and can be approved to exercise the full pipeline.
+            const tsRes = await fetch(`${API}/test-session`, { method:"POST" });
+            if (!tsRes.ok) throw new Error("Could not create test session (" + tsRes.status + ")");
+            const { session_id: testSessionId } = await tsRes.json();
+            fd.append("session_id", testSessionId);
+          } else if (data.sessionId) {
+            // Session-based: send session_id (no file re-upload needed).
             fd.append("session_id", data.sessionId);
           } else if (data.file) {
+            // Legacy: attach the zip file directly.
             fd.append("file", data.file);
           }
 
@@ -1004,6 +1004,11 @@
 
           if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
           localStorage.removeItem("chatbook_order_draft"); // Fix 1: clear draft on success
+          if (_isTestMode) {
+            setTestDone(true);
+            setSubmitting(false);
+            return;
+          }
           window.location.href = "https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00?prefilled_quantity=" + (qty * nSeasons);
         } catch(e) {
           setError("Something went wrong: " + e.message + ". Please try again or email hello@ourchatbook.com.");
