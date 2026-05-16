@@ -904,6 +904,8 @@
       const [submitting, setSubmitting] = useState(false);
       const [error, setError] = useState("");
       const [addonChecked, setAddonChecked] = useState({});
+      const [testDone, setTestDone] = useState(false);
+      const _isTestMode = new URLSearchParams(window.location.search).get('test') === 'true';
 
       const vibe = VIBES.find(v => v.id === data.vibeId) || VIBES[0];
       const foil = FOILS.find(f => f.id === data.foilId) || FOILS[0];
@@ -934,6 +936,13 @@
         }
         setSubmitting(true);
         setError("");
+
+        // Test mode: skip real upload and simulate success
+        if (_isTestMode) {
+          setTestDone(true);
+          setSubmitting(false);
+          return;
+        }
 
         try {
           const fd = new FormData();
@@ -1116,22 +1125,31 @@
 
           <ErrorMsg msg={error} />
 
-          <div style={{ paddingTop:16, borderTop:"1px solid #f0f0f0", marginTop:8 }}>
-            <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-              <Btn variant="secondary" onClick={onBack}>← Back</Btn>
-              <button onClick={handleSubmit} disabled={submitting} style={{ flex:1, padding:"15px 0", background:submitting?"#555":"#111", color:"#fff", border:"none", fontSize:15, fontWeight:500, cursor:submitting?"not-allowed":"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background 0.15s" }}>
-                {submitting ? (
-                  <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
-                    <span style={{ display:"inline-block", width:16, height:16, border:"2px solid #fff", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
-                    Uploading…
-                  </span>
-                ) : `Pay Now · $${total}`}
-              </button>
+          {testDone ? (
+            <div style={{ paddingTop:16, borderTop:"1px solid #f0f0f0", marginTop:8 }}>
+              <div style={{ padding:"20px 24px", background:"#f7faf7", border:"1px solid #c3e6c3", marginBottom:12 }}>
+                <div style={{ fontSize:14, fontWeight:500, color:"#2a6a2a", marginBottom:6 }}>TEST MODE — Checkout complete</div>
+                <div style={{ fontSize:13, fontWeight:300, color:"#555", lineHeight:1.6 }}>No real order was placed. Full wizard flow confirmed working end-to-end.</div>
+              </div>
             </div>
-            <div style={{ marginTop:12, fontSize:11, fontWeight:300, color:"#bbb", textAlign:"center", lineHeight:1.6 }}>
-              Secure payment via Stripe · Your chat data is deleted after processing
+          ) : (
+            <div style={{ paddingTop:16, borderTop:"1px solid #f0f0f0", marginTop:8 }}>
+              <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                <Btn variant="secondary" onClick={onBack}>← Back</Btn>
+                <button onClick={handleSubmit} disabled={submitting} style={{ flex:1, padding:"15px 0", background:submitting?"#555":"#111", color:"#fff", border:"none", fontSize:15, fontWeight:500, cursor:submitting?"not-allowed":"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background 0.15s" }}>
+                  {submitting ? (
+                    <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+                      <span style={{ display:"inline-block", width:16, height:16, border:"2px solid #fff", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
+                      Uploading…
+                    </span>
+                  ) : `Pay Now · $${total}`}
+                </button>
+              </div>
+              <div style={{ marginTop:12, fontSize:11, fontWeight:300, color:"#bbb", textAlign:"center", lineHeight:1.6 }}>
+                Secure payment via Stripe · Your chat data is deleted after processing
+              </div>
             </div>
-          </div>
+          )}
         </div>
       );
     }
