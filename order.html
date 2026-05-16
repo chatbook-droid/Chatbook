@@ -936,6 +936,7 @@
         }
         setSubmitting(true);
         setError("");
+        console.log("[handleSubmit] TEST MODE:", _isTestMode, "| data.sessionId:", data.sessionId, "| data.file:", data.file);
 
         // In test mode, use dummy address so /submit doesn't get blank shipping fields.
         const effectivePrimaryAddr = _isTestMode
