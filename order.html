@@ -43,6 +43,15 @@
       { id:"white",  label:"White",  color:"#F5F5F5" },
     ];
 
+    // ── Test mode dummy data (dev only — never linked from any public page) ──
+    const TEST_SEASONS = [
+      { season:1, page_count:101, date_from:"2024-08", date_to:"2024-10", status:"ready" },
+      { season:2, page_count:119, date_from:"2024-11", date_to:"2025-04", status:"ready" },
+      { season:3, page_count:107, date_from:"2025-04", date_to:"2025-08", status:"ready" },
+      { season:4, page_count:193, date_from:"2025-08", date_to:"2026-04", status:"ready" },
+    ];
+    const TEST_PARTICIPANTS = ["Jordan Ellis","Sam Rivera","Casey Kim","Alex Morgan","Taylor Chen"];
+
     // ─────────────────────────────────────────────
     // BUG 1 FIX: robust WhatsApp name parser
     // Handles both iOS [MM/DD/YY, H:MM:SS AM] Name: msg
@@ -1241,11 +1250,16 @@
       const _platformParam = _urlParams.get('platform');
       const _titleParam = _urlParams.get('title') || '';
       const _skipToStep2 = _platformParam === 'imessage' || _platformParam === 'whatsapp';
-      const [step, setStep] = useState(_skipToStep2 ? 2 : 1);
-      const [data, setData] = useState(_skipToStep2 ? { platform: _platformParam, bookName: _titleParam } : {});
+      const _testMode = _urlParams.get('test') === 'true';
+      const [step, setStep] = useState(_skipToStep2 || _testMode ? 2 : 1);
+      const [data, setData] = useState(() => {
+        if (_testMode) return { platform:'whatsapp', bookName:'Test Chat', participants:TEST_PARTICIPANTS, sessionSeasons:TEST_SEASONS, selectedSeasons:TEST_SEASONS };
+        if (_skipToStep2) return { platform:_platformParam, bookName:_titleParam };
+        return {};
+      });
       const [draft, setDraft] = useState(null); // non-null = show banner
       // parsePhase: null = no overlay | "parsing" = spinner | "seasons" = season review
-      const [parsePhase, setParsePhase] = useState(null);
+      const [parsePhase, setParsePhase] = useState(_testMode ? "seasons" : null);
       const [parseError, setParseError] = useState("");
       const TOTAL = 7;
 
@@ -1270,6 +1284,7 @@
 
       // On mount: check for saved draft
       useEffect(() => {
+        if (_testMode) return;
         try {
           const saved = localStorage.getItem(DRAFT_KEY);
           if (saved) {
@@ -1287,7 +1302,7 @@
       // 2. Check IndexedDB for session_id stored by the platform page.
       // 3. Load the zip file from IndexedDB for client-side participant parsing.
       useEffect(() => {
-        if (!_skipToStep2) return;
+        if (!_skipToStep2 || _testMode) return;
 
         // Synchronously check sessionStorage for a completed session
         let hasCompletedSession = false;
@@ -1350,6 +1365,7 @@
       // Persist data + step to localStorage whenever they change
       // Skip file/chatText (not serializable or too large)
       useEffect(() => {
+        if (_testMode) return;
         if (step === 1 && Object.keys(data).length === 0) return;
         try {
           const { file, chatText, ...saveable } = data;
@@ -1436,6 +1452,9 @@
               onRetry={() => { setParseError(""); setParsePhase(null); }}
               onContinue={(firstSeason) => { if (firstSeason) setData(d => ({ ...d, selectedSeasons: [firstSeason] })); setParsePhase(null); next(); }}
             />
+          )}
+          {_testMode && (
+            <div style={{ position:"fixed", top:8, right:8, zIndex:9999, background:"#c00", color:"#fff", fontSize:10, fontWeight:700, letterSpacing:"0.15em", padding:"4px 10px", borderRadius:3, pointerEvents:"none" }}>TEST MODE</div>
           )}
           <Nav />
 
