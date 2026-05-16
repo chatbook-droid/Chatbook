@@ -895,7 +895,7 @@
     // BUG 2 FIX: AddrForm moved to module level (above)
     // BUG 3 FIX: sends individual named fields matching backend expectations
     // ══════════════════════════════════════════════
-    function Screen7({ data, setData, onBack }) {
+    function Screen7({ data, setData, onBack, testMode }) {
       const [qty, setQty] = useState(data.qty || 1);
       const [shipMode, setShipMode] = useState(data.shipMode || "single");
       const [singleAddr, setSingleAddr] = useState(data.singleAddr || { name:"", phone:"", line1:"", line2:"", city:"", state:"", zip:"", country:"US" });
@@ -905,7 +905,7 @@
       const [error, setError] = useState("");
       const [addonChecked, setAddonChecked] = useState({});
       const [testDone, setTestDone] = useState(false);
-      const _isTestMode = new URLSearchParams(window.location.search).get('test') === 'true';
+      const _isTestMode = testMode === true;
 
       const vibe = VIBES.find(v => v.id === data.vibeId) || VIBES[0];
       const foil = FOILS.find(f => f.id === data.foilId) || FOILS[0];
@@ -931,11 +931,16 @@
       async function handleSubmit() {
         if (!consent) { setError("Please agree to the terms to continue."); return; }
         const primaryAddr = shipMode === "single" ? singleAddr : multiAddrs[0];
-        if (!primaryAddr.name || !primaryAddr.phone || !primaryAddr.line1 || !primaryAddr.city || !primaryAddr.state || !primaryAddr.zip) {
+        if (!_isTestMode && (!primaryAddr.name || !primaryAddr.phone || !primaryAddr.line1 || !primaryAddr.city || !primaryAddr.state || !primaryAddr.zip)) {
           setError("Please complete the shipping address, including phone number."); return;
         }
         setSubmitting(true);
         setError("");
+
+        // In test mode, use dummy address so /submit doesn't get blank shipping fields.
+        const effectivePrimaryAddr = _isTestMode
+          ? { name:"Test User", phone:"5550000000", line1:"123 Test St", line2:"", city:"San Francisco", state:"CA", zip:"94105", country:"US" }
+          : primaryAddr;
 
         try {
           const fd = new FormData();
@@ -970,7 +975,7 @@
 
           // Customer / cover / shipping fields
           fd.append("group_name",       data.bookName || "");
-          fd.append("customer_name",    primaryAddr.name);
+          fd.append("customer_name",    effectivePrimaryAddr.name);
           fd.append("customer_email",   data.proofEmail || "");
           fd.append("platform",         data.platform || "whatsapp");
           fd.append("cover_color",      data.coverLabel || vibe.label);
@@ -979,14 +984,14 @@
           fd.append("quantity",         String(qty));
           fd.append("total",            String(total));
           fd.append("shipping_mode",    shipMode);
-          fd.append("shipping_name",    primaryAddr.name);
-          fd.append("shipping_phone",   primaryAddr.phone || "");
-          fd.append("shipping_line1",   primaryAddr.line1);
-          fd.append("shipping_line2",   primaryAddr.line2 || "");
-          fd.append("shipping_city",    primaryAddr.city);
-          fd.append("shipping_state",   primaryAddr.state);
-          fd.append("shipping_zip",     primaryAddr.zip);
-          fd.append("shipping_country", primaryAddr.country || "US");
+          fd.append("shipping_name",    effectivePrimaryAddr.name);
+          fd.append("shipping_phone",   effectivePrimaryAddr.phone || "");
+          fd.append("shipping_line1",   effectivePrimaryAddr.line1);
+          fd.append("shipping_line2",   effectivePrimaryAddr.line2 || "");
+          fd.append("shipping_city",    effectivePrimaryAddr.city);
+          fd.append("shipping_state",   effectivePrimaryAddr.state);
+          fd.append("shipping_zip",     effectivePrimaryAddr.zip);
+          fd.append("shipping_country", effectivePrimaryAddr.country || "US");
           fd.append("dedication",       data.dedication || "");
           fd.append("closing_note",     data.closingNote || "");
           fd.append("nicknames",        JSON.stringify(data.nicknames || {}));
@@ -1462,7 +1467,7 @@
         <Screen4 data={data} setData={setData} onBack={back} onNext={next} />,
         <Screen5 data={data} setData={setData} onBack={back} onNext={next} />,
         <Screen6 data={data} setData={setData} onBack={back} onNext={next} />,
-        <Screen7 data={data} setData={setData} onBack={back} />,
+        <Screen7 data={data} setData={setData} onBack={back} testMode={_testMode} />,
       ];
 
       return (
