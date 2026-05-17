@@ -27,14 +27,12 @@
     const { useState, useRef, useEffect } = React;
 
     const VIBES = [
-      { id:"crimson", label:"Crimson", cover:"#6B0000", spine:"#3d0000", gold:"#C9A84C" },
+      { id:"crimson", label:"Crimson", cover:"#8B0000", spine:"#5a0000", gold:"#C9A84C" },
       { id:"navy",    label:"Navy",    cover:"#1B2A4A", spine:"#0f1a2e", gold:"#D4AF6A" },
-      { id:"forest",  label:"Forest",  cover:"#2D4A35", spine:"#1a2e20", gold:"#C8B97A" },
-      { id:"slate",   label:"Slate",   cover:"#3A3F4A", spine:"#22262f", gold:"#E2C97E" },
-      { id:"plum",    label:"Plum",    cover:"#4A1A4A", spine:"#2e0e2e", gold:"#D4A8D4" },
-      { id:"black",   label:"Black",   cover:"#111111", spine:"#000000", gold:"#C9A84C" },
+      { id:"forest",  label:"Forest",  cover:"#2D4A2D", spine:"#1a2e1a", gold:"#C8B97A" },
+      { id:"slate",   label:"Slate",   cover:"#6B7280", spine:"#4b5260", gold:"#E2C97E" },
+      { id:"black",   label:"Black",   cover:"#1A1A1A", spine:"#000000", gold:"#C9A84C" },
       { id:"tan",     label:"Tan",     cover:"#C4A882", spine:"#a08860", gold:"#7a5c2e" },
-      { id:"white",   label:"White",   cover:"#F0EBE0", spine:"#d8d0c0", gold:"#8B6914" },
     ];
 
     const FOILS = [
@@ -505,7 +503,7 @@
     // ══════════════════════════════════════════════
     function Screen3({ data, setData, onBack, onNext }) {
       const initVibe = VIBES.find(v => v.id === data.vibeId) || VIBES[0];
-      const [vibe, setVibe] = useState({ ...initVibe, ...(data.customCover ? { id:"custom", label:"Custom", cover:data.customCover, spine:data.customSpine } : {}) });
+      const [vibe, setVibe] = useState(initVibe);
       const [foil, setFoil] = useState(FOILS.find(f => f.id === data.foilId) || FOILS[0]);
 
       function pickVibe(v) {
@@ -513,8 +511,7 @@
       }
 
       function advance() {
-        setData(d => ({ ...d, vibeId:vibe.id, coverColor:vibe.cover, spineColor:vibe.spine, coverLabel:vibe.label, foilId:foil.id, foilColor:foil.color, foilLabel:foil.label,
-          ...(vibe.id==="custom" ? { customCover:vibe.cover, customSpine:vibe.spine } : { customCover:null }) }));
+        setData(d => ({ ...d, vibeId:vibe.id, coverColor:vibe.cover, spineColor:vibe.spine, coverLabel:vibe.label, foilId:foil.id, foilColor:foil.color, foilLabel:foil.label }));
         onNext();
       }
 
@@ -534,21 +531,11 @@
               {VIBES.map(v => (
                 <button key={v.id} onClick={() => pickVibe(v)} style={{
                   background:v.cover, border:vibe.id===v.id?"2px solid #111":"2px solid transparent", borderRadius:2, padding:"7px 15px",
-                  color:(v.id==="white"||v.id==="tan")?"rgba(0,0,0,0.65)":"rgba(255,255,255,0.9)",
+                  color:v.id==="tan"?"rgba(0,0,0,0.65)":"rgba(255,255,255,0.9)",
                   fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
                   opacity:vibe.id===v.id?1:0.65, boxShadow:vibe.id===v.id?"0 2px 10px rgba(0,0,0,0.2)":"none", transition:"all 0.15s",
                 }}>{v.label}</button>
               ))}
-              <label style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 15px", border:vibe.id==="custom"?"2px solid #111":"2px dashed #ddd", borderRadius:2, fontSize:12, fontWeight:500, color:vibe.id==="custom"?"rgba(255,255,255,0.9)":"#aaa", cursor:"pointer", fontFamily:"'DM Sans',sans-serif", background:vibe.id==="custom"?vibe.cover:"#fff", position:"relative" }}>
-                <input type="color" defaultValue={data.customCover||"#8B4513"} style={{ width:0, height:0, opacity:0, position:"absolute" }}
-                  onChange={e => {
-                    const hex = e.target.value;
-                    const r = Math.max(0,parseInt(hex.slice(1,3),16)-40), g = Math.max(0,parseInt(hex.slice(3,5),16)-40), b = Math.max(0,parseInt(hex.slice(5,7),16)-40);
-                    const light = (parseInt(hex.slice(1,3),16)+parseInt(hex.slice(3,5),16)+parseInt(hex.slice(5,7),16))/3;
-                    setVibe({ id:"custom", label:"Custom", cover:hex, spine:`rgb(${r},${g},${b})`, gold:light>160?"#7a5c2e":"#C9A84C" });
-                  }} />
-                + Custom
-              </label>
             </div>
           </div>
 
