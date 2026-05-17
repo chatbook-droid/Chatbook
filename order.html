@@ -11,6 +11,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #fff; font-family: 'DM Sans', sans-serif; }
@@ -894,6 +895,44 @@
       const [testDone, setTestDone] = useState(false);
       const _isTestMode = testMode === true;
 
+      // Embedded checkout state
+      // checkoutPhase: null | 'loading' | 'mounting' | 'checkout' | 'complete'
+      const [checkoutPhase, setCheckoutPhase] = useState(null);
+      const [stripeClientSecret, setStripeClientSecret] = useState(null);
+      const checkoutContainerRef = useRef(null);
+      const stripeCheckoutRef = useRef(null);
+
+      // Mount Stripe embedded checkout once clientSecret is ready and div is in DOM
+      useEffect(() => {
+        if (checkoutPhase !== 'mounting' || !stripeClientSecret) return;
+        let active = true;
+        (async () => {
+          try {
+            const { publishable_key } = await fetch(`${API}/config`).then(r => r.json());
+            const stripeObj = window.Stripe(publishable_key);
+            const co = await stripeObj.initEmbeddedCheckout({
+              clientSecret: stripeClientSecret,
+              onComplete: () => {
+                if (stripeCheckoutRef.current) { stripeCheckoutRef.current.destroy(); stripeCheckoutRef.current = null; }
+                setCheckoutPhase('complete');
+              },
+            });
+            if (!active) { co.destroy(); return; }
+            stripeCheckoutRef.current = co;
+            co.mount(checkoutContainerRef.current);
+            setCheckoutPhase('checkout');
+          } catch(e) {
+            if (active) { setError('Payment setup failed: ' + e.message); setCheckoutPhase(null); setSubmitting(false); }
+          }
+        })();
+        return () => { active = false; };
+      }, [checkoutPhase, stripeClientSecret]);
+
+      // Destroy checkout on unmount
+      useEffect(() => {
+        return () => { if (stripeCheckoutRef.current) { stripeCheckoutRef.current.destroy(); stripeCheckoutRef.current = null; } };
+      }, []);
+
       const vibe = VIBES.find(v => v.id === data.vibeId) || VIBES[0];
       const foil = FOILS.find(f => f.id === data.foilId) || FOILS[0];
       const price = 89;
@@ -996,19 +1035,80 @@
           });
 
           if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
-          localStorage.removeItem("chatbook_order_draft"); // Fix 1: clear draft on success
+          const { submission_id } = await res.json();
+          localStorage.removeItem("chatbook_order_draft");
+
           if (_isTestMode) {
             setTestDone(true);
             setSubmitting(false);
             return;
           }
-          window.location.href = "https://buy.stripe.com/4gM28q0Rd3u83ti5U5gbm00?prefilled_quantity=" + (qty * nSeasons);
+
+          // Create Stripe embedded checkout session
+          const returnUrl = window.location.protocol + '//' + window.location.host +
+            window.location.pathname + '?session_id={CHECKOUT_SESSION_ID}';
+          const csRes = await fetch(`${API}/create-checkout-session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ submission_id, return_url: returnUrl }),
+          });
+          if (!csRes.ok) throw new Error('Checkout setup failed (' + csRes.status + ')');
+          const { client_secret } = await csRes.json();
+          setStripeClientSecret(client_secret);
+          setCheckoutPhase('mounting');
+          setSubmitting(false);
         } catch(e) {
           setError("Something went wrong: " + e.message + ". Please try again or email hello@ourchatbook.com.");
           setSubmitting(false);
         }
       }
 
+      // ── Embedded checkout phases ──────────────────────────────────────────────
+      if (checkoutPhase === 'complete') {
+        return (
+          <div style={{ textAlign:"center", paddingTop:24 }}>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:16, lineHeight:1.2 }}>You're all set.</div>
+            <div style={{ fontSize:15, fontWeight:300, color:"#555", lineHeight:1.7 }}>Your book is being printed and will ship within 2 weeks. Check your email for order details.</div>
+          </div>
+        );
+      }
+
+      if (checkoutPhase === 'mounting' || checkoutPhase === 'checkout') {
+        return (
+          <div>
+            {checkoutPhase === 'mounting' && (
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14, padding:"40px 0 24px" }}>
+                <div style={{ width:28, height:28, border:"2px solid #111", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
+                <div style={{ fontSize:13, fontWeight:300, color:"#aaa" }}>Preparing secure checkout…</div>
+              </div>
+            )}
+            <div ref={checkoutContainerRef} />
+          </div>
+        );
+      }
+
+      if (checkoutPhase === 'loading') {
+        return (
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14, padding:"60px 0" }}>
+            <div style={{ width:28, height:28, border:"2px solid #111", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
+            <div style={{ fontSize:13, fontWeight:300, color:"#aaa" }}>Preparing your order…</div>
+          </div>
+        );
+      }
+
+      // ── Test mode confirmation ────────────────────────────────────────────────
+      if (testDone) {
+        return (
+          <div style={{ paddingTop:16 }}>
+            <div style={{ padding:"20px 24px", background:"#f7faf7", border:"1px solid #c3e6c3" }}>
+              <div style={{ fontSize:14, fontWeight:500, color:"#2a6a2a", marginBottom:6 }}>TEST MODE — Checkout complete</div>
+              <div style={{ fontSize:13, fontWeight:300, color:"#555", lineHeight:1.6 }}>Order submitted to dashboard. Full wizard flow confirmed working end-to-end.</div>
+            </div>
+          </div>
+        );
+      }
+
+      // ── Normal order form ─────────────────────────────────────────────────────
       return (
         <div>
           <div style={{ fontSize:10, fontWeight:500, letterSpacing:"0.2em", textTransform:"uppercase", color:"#ccc", marginBottom:12 }}>Checkout</div>
@@ -1063,12 +1163,9 @@
               </p>
               {addonAvailable.map(s => (
                 <label key={s.season} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid #f0f0f0", cursor:"pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={!!addonChecked[s.season]}
+                  <input type="checkbox" checked={!!addonChecked[s.season]}
                     onChange={e => setAddonChecked(prev => ({ ...prev, [s.season]: e.target.checked }))}
-                    style={{ width:16, height:16, flexShrink:0, cursor:"pointer" }}
-                  />
+                    style={{ width:16, height:16, flexShrink:0, cursor:"pointer" }} />
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:13, fontWeight:500, color:"#111" }}>Season {s.season}</div>
                     <div style={{ fontSize:12, fontWeight:300, color:"#aaa" }}>{fmtDateRange(s.date_from, s.date_to)}</div>
@@ -1086,11 +1183,9 @@
                 <button key={val} onClick={() => setShipMode(val)} style={{ padding:"10px 18px", border:"1px solid #e0e0e0", background:shipMode===val?"#111":"#fff", color:shipMode===val?"#fff":"#555", fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginRight:-1 }}>{label}</button>
               ))}
             </div>
-
             {shipMode === "single" && (
               <AddrForm addr={singleAddr} onChange={(field,val) => setSingleAddr(a => ({ ...a, [field]:val }))} />
             )}
-
             {shipMode === "multiple" && (
               <div>
                 <div style={{ fontSize:12, color:"#aaa", marginBottom:12 }}>Add up to 10 shipping addresses — one book per address.</div>
@@ -1131,31 +1226,22 @@
 
           <ErrorMsg msg={error} />
 
-          {testDone ? (
-            <div style={{ paddingTop:16, borderTop:"1px solid #f0f0f0", marginTop:8 }}>
-              <div style={{ padding:"20px 24px", background:"#f7faf7", border:"1px solid #c3e6c3", marginBottom:12 }}>
-                <div style={{ fontSize:14, fontWeight:500, color:"#2a6a2a", marginBottom:6 }}>TEST MODE — Checkout complete</div>
-                <div style={{ fontSize:13, fontWeight:300, color:"#555", lineHeight:1.6 }}>No real order was placed. Full wizard flow confirmed working end-to-end.</div>
-              </div>
+          <div style={{ paddingTop:16, borderTop:"1px solid #f0f0f0", marginTop:8 }}>
+            <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+              <Btn variant="secondary" onClick={onBack}>← Back</Btn>
+              <button onClick={handleSubmit} disabled={submitting} style={{ flex:1, padding:"15px 0", background:submitting?"#555":"#111", color:"#fff", border:"none", fontSize:15, fontWeight:500, cursor:submitting?"not-allowed":"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background 0.15s" }}>
+                {submitting ? (
+                  <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+                    <span style={{ display:"inline-block", width:16, height:16, border:"2px solid #fff", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
+                    Processing…
+                  </span>
+                ) : `Pay Now · $${total}`}
+              </button>
             </div>
-          ) : (
-            <div style={{ paddingTop:16, borderTop:"1px solid #f0f0f0", marginTop:8 }}>
-              <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-                <Btn variant="secondary" onClick={onBack}>← Back</Btn>
-                <button onClick={handleSubmit} disabled={submitting} style={{ flex:1, padding:"15px 0", background:submitting?"#555":"#111", color:"#fff", border:"none", fontSize:15, fontWeight:500, cursor:submitting?"not-allowed":"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background 0.15s" }}>
-                  {submitting ? (
-                    <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
-                      <span style={{ display:"inline-block", width:16, height:16, border:"2px solid #fff", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
-                      Uploading…
-                    </span>
-                  ) : `Pay Now · $${total}`}
-                </button>
-              </div>
-              <div style={{ marginTop:12, fontSize:11, fontWeight:300, color:"#bbb", textAlign:"center", lineHeight:1.6 }}>
-                Secure payment via Stripe · Your chat data is deleted after processing
-              </div>
+            <div style={{ marginTop:12, fontSize:11, fontWeight:300, color:"#bbb", textAlign:"center", lineHeight:1.6 }}>
+              Secure payment via Stripe · Your chat data is deleted after processing
             </div>
-          )}
+          </div>
         </div>
       );
     }
@@ -1275,6 +1361,8 @@
       const _titleParam = _urlParams.get('title') || '';
       const _skipToStep2 = _platformParam === 'imessage' || _platformParam === 'whatsapp';
       const _testMode = _urlParams.get('test') === 'true';
+      const _stripeSessionId = _urlParams.get('session_id');
+      const [sessionPaymentStatus, setSessionPaymentStatus] = useState(_stripeSessionId ? 'loading' : null);
       const [step, setStep] = useState(_skipToStep2 || _testMode ? 2 : 1);
       const [data, setData] = useState(() => {
         if (_testMode) return { platform:'whatsapp', bookName:'Test Chat', participants:TEST_PARTICIPANTS, sessionSeasons:TEST_SEASONS, selectedSeasons:TEST_SEASONS };
@@ -1456,6 +1544,15 @@
         }
       }
 
+      // Fetch payment status when returning from Stripe return_url
+      useEffect(() => {
+        if (!_stripeSessionId) return;
+        fetch(`${API}/session-status?session_id=${_stripeSessionId}`)
+          .then(r => r.json())
+          .then(d => setSessionPaymentStatus(d.payment_status === 'paid' ? 'paid' : 'failed'))
+          .catch(() => setSessionPaymentStatus('failed'));
+      }, []);
+
       const screens = [
         <Screen1 data={data} setData={setData} onNext={next} />,
         <Screen2 data={data} setData={setData} onBack={back} onNext={next} onParse={startFullParse} />,
@@ -1465,6 +1562,37 @@
         <Screen6 data={data} setData={setData} onBack={back} onNext={next} />,
         <Screen7 data={data} setData={setData} onBack={back} testMode={_testMode} />,
       ];
+
+      // Post-payment return page (Stripe redirects here via return_url)
+      if (_stripeSessionId) {
+        return (
+          <div style={{ background:"#fff", minHeight:"100vh", fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:"#111" }}>
+            <Nav />
+            <div style={{ maxWidth:600, margin:"0 auto", padding:"60px 24px 80px" }}>
+              {sessionPaymentStatus === 'loading' && (
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
+                  <div style={{ width:32, height:32, border:"2px solid #111", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
+                  <div style={{ fontSize:14, color:"#aaa" }}>Confirming your order…</div>
+                </div>
+              )}
+              {sessionPaymentStatus === 'paid' && (
+                <div style={{ textAlign:"center" }}>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#111", marginBottom:16, lineHeight:1.2 }}>You're all set.</div>
+                  <div style={{ fontSize:15, fontWeight:300, color:"#555", lineHeight:1.7, marginBottom:32 }}>Your book is being printed and will ship within 2 weeks. Check your email for order details.</div>
+                  <a href="/" style={{ fontSize:13, color:"#aaa", textDecoration:"none" }}>← Back to ourchatbook.com</a>
+                </div>
+              )}
+              {sessionPaymentStatus === 'failed' && (
+                <div style={{ textAlign:"center" }}>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:24, fontWeight:700, color:"#111", marginBottom:16 }}>Something went wrong.</div>
+                  <div style={{ fontSize:14, fontWeight:300, color:"#888", lineHeight:1.7, marginBottom:24 }}>Your payment could not be confirmed. Please try again or email us at orders@ourchatbook.com.</div>
+                  <a href="/order.html" style={{ fontSize:13, color:"#111", textDecoration:"underline" }}>Try again</a>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
 
       return (
         <div style={{ background:"#fff", minHeight:"100vh", fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:"#111" }}>
