@@ -1038,14 +1038,16 @@
           localStorage.removeItem("chatbook_order_draft");
 
           // Create Stripe embedded checkout session
-          const returnUrl = window.location.protocol + '//' + window.location.host +
-            window.location.pathname + '?session_id={CHECKOUT_SESSION_ID}';
           const csRes = await fetch(`${API}/create-checkout-session`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ submission_id, return_url: returnUrl }),
+            body: JSON.stringify({ submission_id }),
           });
-          if (!csRes.ok) throw new Error('Checkout setup failed (' + csRes.status + ')');
+          if (!csRes.ok) {
+            let errMsg = 'Checkout setup failed (' + csRes.status + ')';
+            try { const b = await csRes.json(); if (b.error) errMsg += ': ' + b.error; } catch(_) {}
+            throw new Error(errMsg);
+          }
           const { client_secret } = await csRes.json();
           setStripeClientSecret(client_secret);
           setCheckoutPhase('mounting');
