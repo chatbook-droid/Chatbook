@@ -1021,10 +1021,6 @@
             </div>
             {[
               ["Book name",   data.bookName || "—"],
-              ...(nSeasons > 1
-                ? [["Seasons", `${nSeasons} volumes`]]
-                : [["Season",  "Season 1"]]
-              ),
               ["Cover",       `${data.coverLabel || vibe.label} · ${data.foilLabel || foil.label} foil`],
               ["Format",      "8.5×11 hardcover, linen wrap"],
               ["Proof email", data.proofEmail || "—"],
@@ -1035,6 +1031,18 @@
                 <span style={{ fontSize:13, fontWeight:400, color:"#111", maxWidth:"55%", textAlign:"right" }}>{v}</span>
               </div>
             ))}
+            <div style={{ padding:"12px 20px", borderBottom:"1px solid #f0f0f0" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom: effectiveSeasons.length > 1 ? 8 : 0 }}>
+                <span style={{ fontSize:13, fontWeight:300, color:"#888" }}>Seasons</span>
+                <span style={{ fontSize:13, fontWeight:400, color:"#111" }}>{qty} {qty === 1 ? "copy" : "copies"} of each</span>
+              </div>
+              {effectiveSeasons.map(s => (
+                <div key={s.season} style={{ display:"flex", justifyContent:"space-between", paddingLeft:12, marginTop:4 }}>
+                  <span style={{ fontSize:12, fontWeight:300, color:"#aaa" }}>Season {s.season}{s.date_from || s.date_to ? ` · ${fmtDateRange(s.date_from, s.date_to)}` : ""}</span>
+                  <span style={{ fontSize:12, fontWeight:400, color:"#555" }}>${price * qty}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div style={{ marginBottom:24 }}>
@@ -1051,7 +1059,7 @@
             <div style={{ marginBottom:24 }}>
               <FieldLabel>Add more seasons</FieldLabel>
               <p style={{ fontSize:13, fontWeight:300, color:"#aaa", marginBottom:12, lineHeight:1.6 }}>
-                Your chat spans {allSessionSeasons.length} seasons. You're starting with Season 1 — add more volumes below.
+                Your chat spans {allSessionSeasons.length} seasons. You're starting with Season 1 — add more seasons below.
               </p>
               {addonAvailable.map(s => (
                 <label key={s.season} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid #f0f0f0", cursor:"pointer" }}>
@@ -1105,7 +1113,7 @@
           <div style={{ padding:"16px 20px", background:"#fafafa", border:"1px solid #f0f0f0", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <div>
               <div style={{ fontSize:13, fontWeight:300, color:"#888" }}>
-                {nSeasons > 1 ? `${qty} × ${nSeasons} seasons × $89` : `${qty} × $89`}
+                {nSeasons > 1 ? `${qty} ${qty === 1 ? "copy" : "copies"} × ${nSeasons} seasons × $89` : `${qty} ${qty === 1 ? "copy" : "copies"} × $89`}
               </div>
               <div style={{ fontSize:11, fontWeight:300, color:"#bbb", marginTop:2 }}>+ shipping calculated at checkout</div>
             </div>
