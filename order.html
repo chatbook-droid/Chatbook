@@ -431,17 +431,18 @@
 
       function advance() {
         if (!name.trim()) { setError("Please enter a name for your book."); return; }
-        if ((data.platform === "imessage" || data.platform === "whatsapp") && !data.file) { setError("Please upload your chat zip file."); return; }
         const trimmedName = name.trim();
         setData(d => ({ ...d, bookName: trimmedName, season: 1 }));
-        // If we already have a completed session (e.g. navigated back then forward),
-        // skip re-uploading and advance directly.
+        // If we already have a completed session (real or test), advance directly — no file needed.
         if (data.sessionId) {
           onNext();
           return;
         }
-        // If the chat is a zip, kick off the full server parse.
-        // Otherwise just advance (legacy or non-zip path).
+        // No session yet — require a file for whatsapp/imessage.
+        if ((data.platform === "imessage" || data.platform === "whatsapp") && !data.file) {
+          setError("Please upload your chat zip file."); return;
+        }
+        // Kick off server parse for zip files.
         if (data.file && data.file.name.toLowerCase().endsWith(".zip") && onParse) {
           onParse(data.file, trimmedName);
         } else {
@@ -1377,7 +1378,7 @@
       const [sessionPaymentStatus, setSessionPaymentStatus] = useState(_stripeSessionId ? 'loading' : null);
       const [step, setStep] = useState(_skipToStep2 || _testMode ? 2 : 1);
       const [data, setData] = useState(() => {
-        if (_testMode) return { platform:'whatsapp', bookName:'Test Chat', participants:TEST_PARTICIPANTS, sessionSeasons:TEST_SEASONS, selectedSeasons:TEST_SEASONS };
+        if (_testMode) return { platform:'whatsapp', bookName:'Test Chat', participants:TEST_PARTICIPANTS, sessionSeasons:TEST_SEASONS, selectedSeasons:TEST_SEASONS, sessionId:'test' };
         if (_skipToStep2) return { platform:_platformParam, bookName:_titleParam };
         return {};
       });
