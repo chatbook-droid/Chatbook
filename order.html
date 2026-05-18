@@ -732,6 +732,36 @@
       return eps;
     }
 
+    // For active chats with very few natural gaps, fall back to equal time chunks.
+    // Divides the date range into n buckets; each bucket becomes an episode using
+    // the first and last actual message date within that window.
+    function buildTimeChunks(dates, n) {
+      if (dates.length === 0 || n <= 1) return [{ start: dates[0], end: dates[dates.length - 1] }];
+      const firstMs = dates[0].getTime();
+      const lastMs  = dates[dates.length - 1].getTime();
+      const chunkMs = (lastMs - firstMs) / n;
+      const result  = [];
+      for (let i = 0; i < n; i++) {
+        const lo = firstMs + chunkMs * i;
+        const hi = i < n - 1 ? firstMs + chunkMs * (i + 1) : lastMs + 1;
+        const inChunk = dates.filter(d => { const t = d.getTime(); return t >= lo && t < hi; });
+        if (inChunk.length === 0) continue;
+        result.push({ start: inChunk[0], end: inChunk[inChunk.length - 1] });
+      }
+      return result.length > 0 ? result : [{ start: dates[0], end: dates[dates.length - 1] }];
+    }
+
+    // Compute the best episode list for a dates array:
+    // prefer gap-based detection, but fall back to time chunks if the gap
+    // count is too low relative to the total span (< 1 episode per 3 months).
+    function computeBestEpisodes(dates) {
+      const raw = buildEpisodes(dates, 14);
+      const totalMonths = spanMonths(dates[0], dates[dates.length - 1]);
+      const minEps = Math.min(8, Math.max(1, Math.floor(totalMonths / 3)));
+      const episodes = raw.length < minEps ? buildTimeChunks(dates, minEps) : raw;
+      return mergeEpisodes(episodes, 8);
+    }
+
     // Convert episodes to display objects with a date range label.
     function episodesToDisplayList(episodes) {
       return episodes.map(ep => {
@@ -752,8 +782,7 @@
       const [episodes] = useState(() => {
         const dates = parseMessageDates(data.chatText || "");
         if (dates.length === 0) return [];
-        const raw = buildEpisodes(dates, 14);
-        const merged = mergeEpisodes(raw, 8);
+        const merged = computeBestEpisodes(dates);
         return episodesToDisplayList(merged);
       });
 
@@ -761,8 +790,7 @@
         const dates = parseMessageDates(data.chatText || "");
         if (dates.length < 2) return null;
         const months = spanMonths(dates[0], dates[dates.length - 1]);
-        const raw = buildEpisodes(dates, 14);
-        const merged = mergeEpisodes(raw, 8);
+        const merged = computeBestEpisodes(dates);
         return `Your chat spans ${months} month${months !== 1 ? "s" : ""}. We've organized it into ${merged.length} episode${merged.length !== 1 ? "s" : ""}.`;
       });
 
@@ -1586,7 +1614,7 @@
               seasons={data.sessionSeasons || []}
               error={parseError}
               onRetry={() => { setParseError(""); setParsePhase(null); }}
-              onContinue={(firstSeason) => { if (firstSeason) setData(d => ({ ...d, selectedSeasons: [firstSeason] })); setParsePhase(null); next(); }}
+              onContinue={(firstSeason) => { if (firstSeason) setData(d => ({ ...d, selectedSeasons: [firstSeason] })); setParsePhase(null); }}
             />
           )}
           {_testMode && (
