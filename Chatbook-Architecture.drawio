@@ -1,0 +1,141 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="chatbook-architecture" name="Architecture">
+    <mxGraphModel dx="1131" dy="924" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Helvetica;fontSize=24;fontStyle=1;fontColor=#172033;" value="CHATBOOK — SYSTEM ARCHITECTURE" vertex="1">
+          <mxGeometry height="35" width="760" x="40" y="25" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#64748B;" value="Static acquisition site + local iMessage exporter + Railway-hosted parsing and ordering" vertex="1">
+          <mxGeometry height="24" width="760" x="40" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_repo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF2FF;strokeColor=#4F79B8;fontColor=#274A78;fontFamily=Helvetica;fontSize=10;fontStyle=1;arcSize=12;" value="IN THIS REPOSITORY" vertex="1">
+          <mxGeometry height="28" width="135" x="834" y="35" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_external" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F1FF;strokeColor=#8064A2;fontColor=#5B427B;fontFamily=Helvetica;fontSize=10;fontStyle=1;arcSize=12;" value="EXTERNAL / LOCAL" vertex="1">
+          <mxGeometry height="28" width="145" x="979" y="35" as="geometry" />
+        </mxCell>
+        <mxCell id="user" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#172033;strokeColor=#172033;fontColor=#FFFFFF;fontFamily=Helvetica;fontSize=15;align=center;verticalAlign=middle;arcSize=12;" value="&lt;b&gt;CUSTOMER&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Browser + Mac / phone&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="140" x="40" y="128" as="geometry" />
+        </mxCell>
+        <mxCell id="repo_boundary" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FBFF;strokeColor=#4F79B8;dashed=1;dashPattern=8 4;arcSize=10;" value="" vertex="1">
+          <mxGeometry height="420" width="585" x="225" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="repo_label" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Helvetica;fontSize=14;fontStyle=1;fontColor=#274A78;" value="STATIC SITE — ourchatbook.com" vertex="1">
+          <mxGeometry height="25" width="300" x="245" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="repo_files" parent="1" style="text;html=1;align=right;verticalAlign=middle;whiteSpace=wrap;fontFamily=Helvetica;fontSize=10;fontColor=#64748B;" value="Repository boundary · HTML/JS + one Python utility" vertex="1">
+          <mxGeometry height="20" width="270" x="515" y="107" as="geometry" />
+        </mxCell>
+        <mxCell id="landing" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4F79B8;fontColor=#172033;fontFamily=Helvetica;fontSize=14;align=center;verticalAlign=middle;arcSize=10;shadow=0;" value="&lt;b&gt;Landing application&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;index.html&lt;br&gt;React 18 + Babel (CDN)&lt;br&gt;Marketing · FAQ · Privacy&lt;/font&gt;" vertex="1">
+          <mxGeometry height="105" width="170" x="255" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="platform_choice" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4F79B8;fontColor=#172033;fontFamily=Helvetica;fontSize=14;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;Platform ingestion&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;imessage.html&lt;br&gt;whatsapp.html&lt;/font&gt;" vertex="1">
+          <mxGeometry height="105" width="155" x="470" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="upload_flow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DDEBFF;strokeColor=#4F79B8;fontColor=#172033;fontFamily=Helvetica;fontSize=14;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;Browser upload workflow&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Validate .zip&lt;br&gt;POST /pre-parse&lt;br&gt;POST /full-parse&lt;br&gt;Store pending file + session_id&lt;/font&gt;" vertex="1">
+          <mxGeometry height="125" width="120" x="665" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="browser_storage" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#FFFFFF;strokeColor=#4F79B8;fontColor=#172033;fontFamily=Helvetica;fontSize=12;align=center;" value="&lt;b&gt;IndexedDB&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;chatbook / files&lt;br&gt;pending ZIP&lt;br&gt;chatbook_session&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="100" x="675" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="order_redirect" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4F79B8;fontColor=#172033;fontFamily=Helvetica;fontSize=13;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;Order redirect&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;order.html&lt;br&gt;preserves query string&lt;/font&gt;" vertex="1">
+          <mxGeometry height="75" width="155" x="470" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="download_script" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4F79B8;fontColor=#172033;fontFamily=Helvetica;fontSize=13;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;iMessage exporter download&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;chatbook-imessage.py&lt;/font&gt;" vertex="1">
+          <mxGeometry height="75" width="170" x="255" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="local_boundary" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9ED;strokeColor=#C78B2B;dashed=1;dashPattern=8 4;arcSize=10;" value="" vertex="1">
+          <mxGeometry height="210" width="770" x="40" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="local_label" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Helvetica;fontSize=14;fontStyle=1;fontColor=#8A5A13;" value="LOCAL EXPORT PIPELINE — CUSTOMER DEVICES" vertex="1">
+          <mxGeometry height="24" width="380" x="60" y="570" as="geometry" />
+        </mxCell>
+        <mxCell id="mac_sources" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#C78B2B;fontColor=#172033;fontFamily=Helvetica;fontSize=13;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;macOS data sources&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Messages chat.db&lt;br&gt;AddressBook SQLite&lt;br&gt;attachment files&lt;/font&gt;" vertex="1">
+          <mxGeometry height="100" width="150" x="65" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="python_transform" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE9BF;strokeColor=#C78B2B;fontColor=#172033;fontFamily=Helvetica;fontSize=13;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;Python exporter&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Select named group&lt;br&gt;extract messages + contacts&lt;br&gt;skip reactions&lt;br&gt;stage / convert media&lt;/font&gt;" vertex="1">
+          <mxGeometry height="120" width="170" x="260" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="imessage_zip" parent="1" style="shape=folder;fontStyle=1;tabWidth=40;tabHeight=14;tabPosition=left;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#C78B2B;fontColor=#172033;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;" value="&lt;b&gt;Chatbook ZIP&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;_chat.txt&lt;br&gt;contacts.json&lt;br&gt;flat media files&lt;/font&gt;" vertex="1">
+          <mxGeometry height="100" width="135" x="475" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="whatsapp_export" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#C78B2B;fontColor=#172033;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;WhatsApp native export&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;iOS / Android&lt;br&gt;Export Chat “With Media”&lt;/font&gt;" vertex="1">
+          <mxGeometry height="100" width="135" x="650" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="external_boundary" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAF8FF;strokeColor=#8064A2;dashed=1;dashPattern=8 4;arcSize=10;" value="" vertex="1">
+          <mxGeometry height="675" width="275" x="850" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="external_label" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Helvetica;fontSize=14;fontStyle=1;fontColor=#5B427B;" value="EXTERNAL SERVICES" vertex="1">
+          <mxGeometry height="25" width="220" x="870" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="cdn" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8064A2;fontColor=#172033;fontFamily=Helvetica;fontSize=13;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;Frontend CDNs&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;React 18&lt;br&gt;ReactDOM&lt;br&gt;Babel standalone&lt;br&gt;Google Fonts&lt;/font&gt;" vertex="1">
+          <mxGeometry height="110" width="205" x="885" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="railway_api" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEE7FF;strokeColor=#8064A2;fontColor=#172033;fontFamily=Helvetica;fontSize=14;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;Railway parsing API&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;/pre-parse&lt;br&gt;/full-parse&lt;br&gt;/notify-me&lt;br&gt;background chat processing&lt;/font&gt;" vertex="1">
+          <mxGeometry height="135" width="205" x="885" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="order_wizard" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEE7FF;strokeColor=#8064A2;fontColor=#172033;fontFamily=Helvetica;fontSize=14;align=center;verticalAlign=middle;arcSize=10;" value="&lt;b&gt;Hosted order wizard&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Railway /order&lt;br&gt;polls parse session&lt;br&gt;book configuration + ordering&lt;/font&gt;" vertex="1">
+          <mxGeometry height="120" width="205" x="885" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="origin_note" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=18;fillColor=#FFF4D6;strokeColor=#D6A23A;fontColor=#6B4A09;fontFamily=Helvetica;fontSize=11;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=10;" value="&lt;b&gt;Origin boundary&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;IndexedDB at ourchatbook.com is not directly readable by the Railway origin; session_id is the server-side handoff.&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="205" x="885" y="665" as="geometry" />
+        </mxCell>
+        <mxCell id="e_user_landing" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;fontColor=#475569;fontFamily=Helvetica;fontSize=10;" target="landing" value="visits">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_landing_platform" edge="1" parent="1" source="landing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#4F79B8;fontColor=#274A78;fontFamily=Helvetica;fontSize=10;" target="platform_choice" value="choose platform">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_platform_upload" edge="1" parent="1" source="platform_choice" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#4F79B8;fontColor=#274A78;fontFamily=Helvetica;fontSize=10;" target="upload_flow" value="ZIP">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_upload_storage" edge="1" parent="1" source="upload_flow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#4F79B8;fontColor=#274A78;fontFamily=Helvetica;fontSize=10;" target="browser_storage" value="persist locally">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_upload_api" edge="1" parent="1" source="upload_flow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8064A2;fontColor=#5B427B;fontFamily=Helvetica;fontSize=10;" target="railway_api" value="HTTPS uploads">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_api_storage" edge="1" parent="1" source="railway_api" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8064A2;fontColor=#5B427B;fontFamily=Helvetica;fontSize=10;dashed=1;" target="browser_storage" value="session_id">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_upload_order" edge="1" parent="1" source="upload_flow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#4F79B8;fontColor=#274A78;fontFamily=Helvetica;fontSize=10;" target="order_redirect" value="navigate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_order_wizard" edge="1" parent="1" source="order_redirect" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8064A2;fontColor=#5B427B;fontFamily=Helvetica;fontSize=10;" target="order_wizard" value="cross-origin redirect">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_api_wizard" edge="1" parent="1" source="railway_api" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8064A2;fontColor=#5B427B;fontFamily=Helvetica;fontSize=10;" target="order_wizard" value="parse status / result">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_cdn_landing" edge="1" parent="1" source="cdn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8064A2;fontColor=#5B427B;fontFamily=Helvetica;fontSize=10;dashed=1;" target="landing" value="runtime assets">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_platform_script" edge="1" parent="1" source="platform_choice" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#4F79B8;fontColor=#274A78;fontFamily=Helvetica;fontSize=10;" target="download_script" value="download">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_script_python" edge="1" parent="1" source="download_script" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#C78B2B;fontColor=#8A5A13;fontFamily=Helvetica;fontSize=10;" target="python_transform" value="runs locally">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sources_python" edge="1" parent="1" source="mac_sources" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#C78B2B;fontColor=#8A5A13;fontFamily=Helvetica;fontSize=10;" target="python_transform" value="read-only">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_python_zip" edge="1" parent="1" source="python_transform" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#C78B2B;fontColor=#8A5A13;fontFamily=Helvetica;fontSize=10;" target="imessage_zip" value="build">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_zip_upload" edge="1" parent="1" source="imessage_zip" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#C78B2B;fontColor=#8A5A13;fontFamily=Helvetica;fontSize=10;" target="platform_choice" value="upload">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_whatsapp_upload" edge="1" parent="1" source="whatsapp_export" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#C78B2B;fontColor=#8A5A13;fontFamily=Helvetica;fontSize=10;" target="platform_choice" value="ZIP upload">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="717.5" y="610" />
+              <mxPoint x="547.5" y="610" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
